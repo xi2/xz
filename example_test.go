@@ -22,15 +22,18 @@ import (
 )
 
 func ExampleReader_Read() {
+	// load some XZ data into memory
 	data, err := ioutil.ReadFile(
 		filepath.Join("testdata", "xz-utils", "good-1-check-sha256.xz"))
 	if err != nil {
 		log.Fatal(err)
 	}
+	// create an xz.Reader to decompress the data
 	r, err := xz.NewReader(bytes.NewReader(data), 0)
 	if err != nil {
 		log.Fatal(err)
 	}
+	// write the data to os.Stdout
 	_, err = io.Copy(os.Stdout, r)
 	if err != nil {
 		log.Fatal(err)
@@ -41,33 +44,44 @@ func ExampleReader_Read() {
 }
 
 func ExampleReader_Multistream() {
+	// load some XZ data into memory
 	data, err := ioutil.ReadFile(
 		filepath.Join("testdata", "xz-utils", "good-1-check-sha256.xz"))
 	if err != nil {
 		log.Fatal(err)
 	}
-	br1, br2 := bytes.NewReader(data), bytes.NewReader(data)
-	r, err := xz.NewReader(io.MultiReader(br1, br2), 0)
+	// create a MultiReader that will read the data twice
+	mr := io.MultiReader(bytes.NewReader(data), bytes.NewReader(data))
+	// create an xz.Reader from the MultiReader
+	r, err := xz.NewReader(mr, 0)
 	if err != nil {
 		log.Fatal(err)
 	}
+	// set Multistream mode to false
 	r.Multistream(false)
+	// read the first stream
 	_, err = io.Copy(os.Stdout, r)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Fprintf(os.Stdout, "Read first stream\n")
+	// reset the XZ reader so it is ready to decompress the second stream
 	err = r.Reset()
 	if err != nil {
 		log.Fatal(err)
 	}
+	// set Multistream mode to false again
 	r.Multistream(false)
+	// read the second stream
 	_, err = io.Copy(os.Stdout, r)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Fprintf(os.Stdout, "Read second stream\n")
+	// reset the XZ reader so it is ready to decompress further
+	// streams
 	err = r.Reset()
+	// confirm that the second stream was the last one
 	if err == io.EOF {
 		fmt.Fprintf(os.Stdout, "No more streams\n")
 	}
