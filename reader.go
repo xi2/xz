@@ -79,8 +79,6 @@ type Reader struct {
 // decode is a wrapper around xzDecRun that additionally handles
 // stream padding
 func (r *Reader) decode() (ret xzRet) {
-	r.buf.outPos = 0
-	r.outPos = 0
 	if r.padding >= 0 {
 		// read all padding in input buffer
 		for r.buf.inPos < len(r.buf.in) &&
@@ -109,6 +107,8 @@ func (r *Reader) decode() (ret xzRet) {
 			}
 		}
 	} else {
+		r.buf.outPos = 0
+		r.outPos = 0
 		ret = xzDecRun(r.dec, r.buf)
 	}
 	return
