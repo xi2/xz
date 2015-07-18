@@ -28,6 +28,9 @@ type testFile struct {
 	err    error
 }
 
+// Note that the md5sums below were generatad with XZ Utils and not
+// with this package.
+
 var badFiles = []testFile{
 	{
 		file:   "bad-0-backward_size.xz",
