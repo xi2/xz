@@ -33,7 +33,7 @@ func ExampleNewReader() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	// write the data to os.Stdout
+	// write the decompressed data to os.Stdout
 	_, err = io.Copy(os.Stdout, r)
 	if err != nil {
 		log.Fatal(err)
