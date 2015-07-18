@@ -36,7 +36,7 @@ const bufSize = 1 << 13 // 8 KiB
 // will use an LZMA2 dictionary size up to dictMax in size. Passing a
 // value of zero sets dictMax to DefaultDictMax.  If an individual XZ
 // stream requires a dictionary size greater than dictMax in order to
-// decompress, Read will return an error.
+// decompress, Read will return ErrMemlimit.
 //
 // Due to internal buffering, the Reader may read more data than
 // necessary from r.
