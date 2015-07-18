@@ -464,4 +464,29 @@ func TestPrematureError(t *testing.T) {
 	}
 }
 
+func TestMultipleBadReads(t *testing.T) {
+	data, err := ioutil.ReadFile(
+		filepath.Join("testdata", "other", "good-2-lzma2-corrupt.xz"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	r, err := xz.NewReader(bytes.NewReader(data), 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := make([]byte, 100)
+	_, err = r.Read(b)
+	if err != xz.ErrData {
+		t.Fatalf("Read returned: %v, expected: xz.ErrData\n")
+	}
+	_, err = r.Read(b)
+	if err != xz.ErrData {
+		t.Fatalf("Read returned: %v, expected: xz.ErrData\n")
+	}
+	_, err = r.Read(b)
+	if err != xz.ErrData {
+		t.Fatalf("Read returned: %v, expected: xz.ErrData\n")
+	}
+}
+
 // Multistream is tested in example_test.go
