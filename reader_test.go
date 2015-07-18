@@ -28,7 +28,7 @@ type testFile struct {
 	err    error
 }
 
-// Note that the md5sums below were generatad with XZ Utils and not
+// Note that the md5sums below were generated with XZ Utils and not
 // with this package.
 
 var badFiles = []testFile{
