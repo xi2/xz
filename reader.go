@@ -122,7 +122,8 @@ func (r *Reader) Read(p []byte) (n int, err error) {
 			n++
 			r.outPos++
 		}
-		// if last call to decoder ended with an error, return
+		// if last call to decoder ended with an error, return that
+		// error
 		if err != nil {
 			break
 		}
