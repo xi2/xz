@@ -1,5 +1,5 @@
 /*
- * Package xz Go Reader interface
+ * Package xz Go Reader API
  *
  * Authors: Michael Cross <https://xi2.org/x/xz>
  *

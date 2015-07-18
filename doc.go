@@ -2,8 +2,8 @@
 //
 // Usage
 //
-// For ease of use, this package is designed to have a similar
-// interface to compress/gzip. See the examples for more details.
+// For ease of use, this package is designed to have a similar API to
+// compress/gzip. See the examples for more details.
 //
 // Implementation details and limitations
 //
