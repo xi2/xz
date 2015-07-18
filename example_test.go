@@ -59,27 +59,26 @@ func ExampleReader_Multistream() {
 	}
 	// set Multistream mode to false
 	r.Multistream(false)
-	// read the first stream
+	// decompress the first stream
 	_, err = io.Copy(os.Stdout, r)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Fprintf(os.Stdout, "Read first stream\n")
-	// reset the XZ reader so it is ready to decompress the second stream
+	// reset the XZ reader so it is ready to read the second stream
 	err = r.Reset()
 	if err != nil {
 		log.Fatal(err)
 	}
 	// set Multistream mode to false again
 	r.Multistream(false)
-	// read the second stream
+	// decompress the second stream
 	_, err = io.Copy(os.Stdout, r)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Fprintf(os.Stdout, "Read second stream\n")
-	// reset the XZ reader so it is ready to decompress further
-	// streams
+	// reset the XZ reader so it is ready to read further streams
 	err = r.Reset()
 	// confirm that the second stream was the last one
 	if err == io.EOF {
