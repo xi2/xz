@@ -849,7 +849,6 @@ func lzmaMain(s *xzDecLZMA2) bool {
 	 * Having the range decoder always normalized when we are outside
 	 * this function makes it easier to correctly handle end of the chunk.
 	 */
-
 	rcNormalize(&s.rc)
 	return true
 }
@@ -988,7 +987,7 @@ func lzma2LZMA(s *xzDecLZMA2, b *xzBuf) bool {
 			s.rc.inLimit = len(s.temp.buf) + tmp
 		case len(s.temp.buf)+tmp < lzmaInRequired:
 			s.temp.buf = s.temp.bufArray[:len(s.temp.buf)+tmp]
-			b.inPos += int(tmp)
+			b.inPos += tmp
 			return true
 		default:
 			s.rc.inLimit = len(s.temp.buf) + tmp - lzmaInRequired
