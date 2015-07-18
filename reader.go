@@ -114,12 +114,12 @@ func (r *Reader) decode() (ret xzRet) {
 	return
 }
 
-func (r *Reader) Read(p []byte) (ppos int, err error) {
+func (r *Reader) Read(p []byte) (n int, err error) {
 	for {
 		// copy r.buf.out -> p
-		for r.outPos < r.buf.outPos && ppos < len(p) {
-			p[ppos] = r.buf.out[r.outPos]
-			ppos++
+		for r.outPos < r.buf.outPos && n < len(p) {
+			p[n] = r.buf.out[r.outPos]
+			n++
 			r.outPos++
 		}
 		// if last call to decoder ended with an error, return
@@ -133,7 +133,7 @@ func (r *Reader) Read(p []byte) (ppos int, err error) {
 			break
 		}
 		// if p full, return with err == nil
-		if ppos == len(p) {
+		if n == len(p) {
 			break
 		}
 		// at this point all pending decoded data is copied to p.
