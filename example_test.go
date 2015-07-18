@@ -21,7 +21,7 @@ import (
 	"xi2.org/x/xz"
 )
 
-func ExampleReader_Read() {
+func ExampleNewReader() {
 	// load some XZ data into memory
 	data, err := ioutil.ReadFile(
 		filepath.Join("testdata", "xz-utils", "good-1-check-sha256.xz"))
