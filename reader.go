@@ -74,6 +74,7 @@ type Reader struct {
 	outPos      int           // pos within buf.out of unwritten data
 	buf         *xzBuf        // decoder input/output buffers
 	dec         *xzDec        // decoder state
+	err         error         // the result of the last decoder call
 }
 
 // decode is a wrapper around xzDecRun that additionally handles
@@ -115,6 +116,8 @@ func (r *Reader) decode() (ret xzRet) {
 }
 
 func (r *Reader) Read(p []byte) (n int, err error) {
+	// restore err
+	err = r.err
 	for {
 		// copy r.buf.out -> p
 		for r.outPos < r.buf.outPos && n < len(p) {
@@ -122,22 +125,21 @@ func (r *Reader) Read(p []byte) (n int, err error) {
 			n++
 			r.outPos++
 		}
-		// if last call to decoder ended with an error, return that
-		// error
+		// if p full but output remaining, return with err == nil
+		if r.outPos < r.buf.outPos && n == len(p) {
+			err = nil
+			break
+		}
+		// all output written. if last call to decoder ended with an
+		// error, return that error
 		if err != nil {
 			break
 		}
-		// if all pending decoded data copied to p and decoder has
-		// finished, return with err == io.EOF
-		if r.outPos == r.buf.outPos && r.dEOF {
+		// if decoder has finished, return with err == io.EOF
+		if r.dEOF {
 			err = io.EOF
 			break
 		}
-		// if p full, return with err == nil
-		if n == len(p) {
-			break
-		}
-		// at this point all pending decoded data is copied to p.
 		// if needed, read more data from r.r
 		if r.buf.inPos == len(r.buf.in) && !r.rEOF {
 			n, e := r.r.Read(r.in[:])
@@ -180,6 +182,8 @@ func (r *Reader) Read(p []byte) (n int, err error) {
 		case xzBufError:
 			err = ErrBuf
 		}
+		// save err
+		r.err = err
 	}
 	return
 }
