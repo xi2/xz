@@ -282,7 +282,7 @@ func decBlock(s *xzDec, b *xzBuf) xzRet {
 		var buf [2*8 + 4]byte // 2*Sizeof(vliType)+Sizeof(uint32)
 		putLE64(uint64(s.block.hash.unpadded), buf[:])
 		putLE64(uint64(s.block.hash.uncompressed), buf[8:])
-		putLE32(s.block.hash.crc32, buf[12:])
+		putLE32(s.block.hash.crc32, buf[16:])
 		s.block.hash.crc32 = xzCRC32(buf[:], s.block.hash.crc32)
 		s.block.count++
 	}
@@ -332,7 +332,7 @@ func decIndex(s *xzDec, b *xzBuf) xzRet {
 			var buf [2*8 + 4]byte // 2*Sizeof(vliType)+Sizeof(uint32)
 			putLE64(uint64(s.index.hash.unpadded), buf[:])
 			putLE64(uint64(s.index.hash.uncompressed), buf[8:])
-			putLE32(s.index.hash.crc32, buf[12:])
+			putLE32(s.index.hash.crc32, buf[16:])
 			s.index.hash.crc32 = xzCRC32(buf[:], s.index.hash.crc32)
 			s.index.count--
 			s.index.sequence = seqIndexUnpadded
