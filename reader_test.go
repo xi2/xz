@@ -357,6 +357,11 @@ var unsupportedFiles = []testFile{
 
 var otherFiles = []testFile{
 	{
+		file:   "good-2-lzma2-corrupt.xz",
+		md5sum: "d9c5223e7e6e305e6c1c6ed73789df88",
+		err:    xz.ErrData,
+	},
+	{
 		file:   "pg2242.txt.xz",
 		md5sum: "0b4e9c76f4dff77d72f541e5b2845f5e",
 		err:    nil,
@@ -429,6 +434,33 @@ func TestMemlimit(t *testing.T) {
 	_, err = io.Copy(b, r)
 	if err != xz.ErrMemlimit {
 		t.Fatalf("wanted error: %v, got: %v\n", xz.ErrMemlimit, err)
+	}
+}
+
+// test to ensure that decoder errors are not returned prematurely
+// the test file returns 6 decoded bytes before corruption occurs
+func TestPrematureError(t *testing.T) {
+	data, err := ioutil.ReadFile(
+		filepath.Join("testdata", "other", "good-2-lzma2-corrupt.xz"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	r, err := xz.NewReader(bytes.NewReader(data), 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := make([]byte, 2)
+	n, err := r.Read(b)
+	if n != 2 || err != nil {
+		t.Fatalf("Read returned: (%d,%v), expected: (2,nil)\n", n, err)
+	}
+	n, err = r.Read(b)
+	if n != 2 || err != nil {
+		t.Fatalf("Read returned: (%d,%v), expected: (2,nil)\n", n, err)
+	}
+	n, err = r.Read(b)
+	if n != 2 || err != xz.ErrData {
+		t.Fatalf("Read returned: (%d,%v), expected: (2,xz.ErrData)\n", n, err)
 	}
 }
 
