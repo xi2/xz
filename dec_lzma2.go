@@ -461,7 +461,6 @@ func dictHasSpace(dict *dictionary) bool {
  * still empty. This special case is needed for single-call decoding to
  * avoid writing a '\x00' to the end of the destination buffer.
  */
-
 func dictGet(dict *dictionary, dist uint32) uint32 {
 	var offset uint32 = dict.pos - dist - 1
 	if dist >= dict.pos {
