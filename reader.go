@@ -146,7 +146,7 @@ func (r *Reader) Read(p []byte) (n int, err error) {
 		}
 		// if needed, read more data from r.r
 		if r.buf.inPos == len(r.buf.in) && !r.rEOF {
-			n, e := r.r.Read(r.in[:])
+			rn, e := r.r.Read(r.in[:])
 			if e != nil && e != io.EOF {
 				// read error
 				err = e
@@ -156,7 +156,7 @@ func (r *Reader) Read(p []byte) (n int, err error) {
 				r.rEOF = true
 			}
 			// set new input buffer in r.buf
-			r.buf.in = r.in[:n]
+			r.buf.in = r.in[:rn]
 			r.buf.inPos = 0
 		}
 		// decode more data
