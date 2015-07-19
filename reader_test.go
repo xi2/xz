@@ -475,17 +475,17 @@ func TestMultipleBadReads(t *testing.T) {
 		t.Fatal(err)
 	}
 	b := make([]byte, 100)
-	_, err = r.Read(b)
-	if err != xz.ErrData {
-		t.Fatalf("Read returned: %v, expected: xz.ErrData\n")
+	n, err := r.Read(b)
+	if n != 6 || err != xz.ErrData {
+		t.Fatalf("Read returned: (%d,%v), expected: (6,xz.ErrData)\n", n, err)
 	}
-	_, err = r.Read(b)
-	if err != xz.ErrData {
-		t.Fatalf("Read returned: %v, expected: xz.ErrData\n")
+	n, err = r.Read(b)
+	if n != 0 || err != xz.ErrData {
+		t.Fatalf("Read returned: (%d,%v), expected: (0,xz.ErrData)\n", n, err)
 	}
-	_, err = r.Read(b)
-	if err != xz.ErrData {
-		t.Fatalf("Read returned: %v, expected: xz.ErrData\n")
+	n, err = r.Read(b)
+	if n != 0 || err != xz.ErrData {
+		t.Fatalf("Read returned: (%d,%v), expected: (0,xz.ErrData)\n", n, err)
 	}
 }
 
