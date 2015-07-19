@@ -31,6 +31,8 @@
 // See <http://tukaani.org/xz/xz-file-format.txt> for the specifics of
 // the XZ file format.
 //
+// Bug reports
+//
 // For bug reports relating to this package please contact the author
 // through <https://xi2.org/x/xz> and not the author of XZ Embedded.
 package xz
