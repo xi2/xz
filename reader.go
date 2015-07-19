@@ -24,19 +24,19 @@ var (
 	ErrNilReader        = errors.New("xz: source reader is nil")
 )
 
-// DefaultDictMax is the default maximum dictionary size used by the
-// decoder. This value is sufficient to decompress files created with
-// XZ Utils "xz -9".
+// DefaultDictMax is the default maximum dictionary size in bytes used
+// by the decoder. This value is sufficient to decompress files
+// created with XZ Utils "xz -9".
 const DefaultDictMax = 1 << 26 // 64 MiB
 
 // bufSize is the input/output buffer size used by the decoder.
 const bufSize = 1 << 13 // 8 KiB
 
 // NewReader creates a new Reader reading from r. The decompressor
-// will use an LZMA2 dictionary size up to dictMax in size. Passing a
-// value of zero sets dictMax to DefaultDictMax.  If an individual XZ
-// stream requires a dictionary size greater than dictMax in order to
-// decompress, Read will return ErrMemlimit.
+// will use an LZMA2 dictionary size up to dictMax bytes in
+// size. Passing a value of zero sets dictMax to DefaultDictMax.  If
+// an individual XZ stream requires a dictionary size greater than
+// dictMax in order to decompress, Read will return ErrMemlimit.
 //
 // Due to internal buffering, the Reader may read more data than
 // necessary from r.
