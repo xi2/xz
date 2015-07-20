@@ -212,8 +212,8 @@ func (r *Reader) Multistream(ok bool) {
 	r.multistream = ok
 }
 
-// When in not in multistream mode, and having finished reading a
-// stream, Reset prepares the reader to read the follow on streams. It
+// Reset prepares the reader to read follow on streams when it is not
+// in multistream mode and it has finished reading a stream. It also
 // resets multistream mode to true (the default). If there are no
 // follow on streams, Reset returns io.EOF.
 func (r *Reader) Reset() error {
