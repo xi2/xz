@@ -3,35 +3,26 @@
 // Usage
 //
 // For ease of use, this package is designed to have a similar API to
-// compress/gzip. See the examples for more details.
+// compress/gzip. See the examples for further details.
 //
-// Implementation details and limitations
+// Implementation
 //
 // This package is a translation from C to Go of XZ Embedded
-// <http://tukaani.org/xz/embedded.html> with small enhancements, and
-// as such shares some (but not all) of its limitations. It cannot
-// decompress every conceivable XZ file out there. However, it should
-// decompress the vast majority of files one is likely to come
-// across. In particular, if you are using files created with XZ Utils
-// "xz -9" with default settings, or with GNU Tar "tar -J", you should
-// be fine.
+// <http://tukaani.org/xz/embedded.html>, with enhancements made to
+// bring it into full compliance with the XZ file format specification
+// v1.0.4. It supports all filters and block check types, supports
+// multiple streams, and performs index verification using SHA-256 as
+// recommended by the specification.
 //
-// The technical limitations, shared with XZ Embedded, are as follows:
+// Thanks
 //
-//   - Only LZMA2 and BCJ filters are supported (no Delta filter).
-//
-// Package xz has the following enhancements over XZ Embedded:
-//
-//   - All known block check types (including SHA256) are implemented.
-//   - Correct handling of multiple streams and stream padding.
-//   - BCJ filters can have a non-zero start offset.
-//   - Filter chains may be full length (up to 4 filters)
-//
-// See <http://tukaani.org/xz/xz-file-format.txt> for the specifics of
-// the XZ file format.
+// Thanks are due to Lasse Collin and Igor Pavlov, the authors of XZ
+// Embedded, on whose code package xz is based. It would not exist
+// without their decision to allow others to modify and reuse their
+// code.
 //
 // Bug reports
 //
 // For bug reports relating to this package please contact the author
-// through <https://xi2.org/x/xz> and not the author of XZ Embedded.
+// through <https://xi2.org/x/xz>, and not the authors of XZ Embedded.
 package xz
