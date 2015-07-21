@@ -354,7 +354,6 @@ func crcValidate(s *xzDec, b *xzBuf) xzRet {
 			return xzOK
 		}
 		if byte((s.crc32>>uint(s.pos))&0xFF) != b.in[b.inPos] {
-			b.inPos++
 			return xzDataError
 		}
 		b.inPos++
@@ -385,7 +384,6 @@ func checkValidate(s *xzDec, b *xzBuf) xzRet {
 			return xzOK
 		}
 		if sum[s.pos] != b.in[b.inPos] {
-			b.inPos++
 			return xzDataError
 		}
 		b.inPos++
@@ -545,7 +543,6 @@ func decBlockHeader(s *xzDec) xzRet {
 		 * so Size of Properties must be zero.
 		 */
 		if s.temp.buf[s.temp.pos] != 0x00 {
-			s.temp.pos++
 			return xzOptionsError
 		}
 		s.temp.pos++
@@ -556,13 +553,11 @@ func decBlockHeader(s *xzDec) xzRet {
 	}
 	/* Filter ID = LZMA2 */
 	if s.temp.buf[s.temp.pos] != 0x21 {
-		s.temp.pos++
 		return xzOptionsError
 	}
 	s.temp.pos++
 	/* Size of Properties = 1-byte Filter Properties */
 	if s.temp.buf[s.temp.pos] != 0x01 {
-		s.temp.pos++
 		return xzOptionsError
 	}
 	s.temp.pos++
@@ -578,7 +573,6 @@ func decBlockHeader(s *xzDec) xzRet {
 	/* The rest must be Header Padding. */
 	for s.temp.pos < len(s.temp.buf) {
 		if s.temp.buf[s.temp.pos] != 0x00 {
-			s.temp.pos++
 			return xzOptionsError
 		}
 		s.temp.pos++
@@ -673,7 +667,6 @@ func decMain(s *xzDec, b *xzBuf) xzRet {
 					return xzOK
 				}
 				if b.in[b.inPos] != 0 {
-					b.inPos++
 					return xzDataError
 				}
 				b.inPos++
@@ -708,7 +701,6 @@ func decMain(s *xzDec, b *xzBuf) xzRet {
 					return xzOK
 				}
 				if b.in[b.inPos] != 0 {
-					b.inPos++
 					return xzDataError
 				}
 				b.inPos++

@@ -1134,7 +1134,6 @@ func xzDecLZMA2Run(s *xzDecLZMA2, b *xzBuf) xzRet {
 			s.lzma2.sequence = s.lzma2.nextSequence
 		case seqProperties:
 			if !lzmaProps(s, b.in[b.inPos]) {
-				b.inPos++
 				return xzDataError
 			}
 			b.inPos++
