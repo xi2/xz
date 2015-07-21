@@ -530,8 +530,9 @@ func decBlockHeader(s *xzDec) xzRet {
 		s.bcjActive = false
 	}
 	if s.bcjActive {
+		/* Valid Filter Flags always take at least two bytes. */
 		if len(s.temp.buf)-s.temp.pos < 2 {
-			return xzOptionsError
+			return xzDataError
 		}
 		ret = xzDecBCJReset(s.bcj, s.temp.buf[s.temp.pos])
 		s.temp.pos++
