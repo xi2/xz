@@ -380,18 +380,17 @@ func checkValidate(s *xzDec, b *xzBuf) xzRet {
 			sum[i], sum[j] = sum[j], sum[i]
 		}
 	}
-	bits := len(sum) << 3
 	for {
 		if b.inPos == len(b.in) {
 			return xzOK
 		}
-		if sum[s.pos>>3] != b.in[b.inPos] {
+		if sum[s.pos] != b.in[b.inPos] {
 			b.inPos++
 			return xzDataError
 		}
 		b.inPos++
-		s.pos += 8
-		if !(s.pos < bits) {
+		s.pos++
+		if !(s.pos < len(sum)) {
 			break
 		}
 	}
