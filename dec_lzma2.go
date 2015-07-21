@@ -561,7 +561,7 @@ func dictFlush(dict *dictionary, b *xzBuf) int {
 	if dict.pos == dict.end {
 		dict.pos = 0
 	}
-	copy(b.out[b.outPos:], dict.buf[dict.start:int(dict.start)+copySize])
+	copy(b.out[b.outPos:], dict.buf[dict.start:dict.start+uint32(copySize)])
 	dict.start = dict.pos
 	b.outPos += copySize
 	return copySize
@@ -1210,12 +1210,15 @@ func xzDecLZMA2Create(dictMax uint32) *xzDecLZMA2 {
  * decoder doesn't support.
  */
 func xzDecLZMA2Reset(s *xzDecLZMA2, props byte) xzRet {
-	/* This limits dictionary size to 3 GiB to keep parsing simpler. */
-	if props > 39 {
-		return xzOptionsError
+	if props > 40 {
+		return xzOptionsError // Bigger than 4 GiB
 	}
-	s.dict.size = uint32(2 + props&1)
-	s.dict.size <<= props>>1 + 11
+	if props == 40 {
+		s.dict.size = ^uint32(0)
+	} else {
+		s.dict.size = uint32(2 + props&1)
+		s.dict.size <<= props>>1 + 11
+	}
 	if s.dict.size > s.dict.sizeMax {
 		return xzMemlimitError
 	}
