@@ -12,6 +12,7 @@
 package xz
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"hash"
 	"hash/crc32"
@@ -61,7 +62,7 @@ const (
 type xzDecHash struct {
 	unpadded     vliType
 	uncompressed vliType
-	crc32        uint32
+	sha256       hash.Hash
 }
 
 // type of xzDec.sequence
@@ -279,11 +280,10 @@ func decBlock(s *xzDec, b *xzBuf) xzRet {
 			vliType(s.blockHeader.size) + s.block.compressed
 		s.block.hash.unpadded += vliType(checkSizes[s.checkType])
 		s.block.hash.uncompressed += s.block.uncompressed
-		var buf [2*8 + 4]byte // 2*Sizeof(vliType)+Sizeof(uint32)
+		var buf [2 * 8]byte // 2*Sizeof(vliType)
 		putLE64(uint64(s.block.hash.unpadded), buf[:])
 		putLE64(uint64(s.block.hash.uncompressed), buf[8:])
-		putLE32(s.block.hash.crc32, buf[16:])
-		s.block.hash.crc32 = xzCRC32(buf[:], s.block.hash.crc32)
+		_, _ = s.block.hash.sha256.Write(buf[:])
 		s.block.count++
 	}
 	return ret
@@ -329,11 +329,10 @@ func decIndex(s *xzDec, b *xzBuf) xzRet {
 			s.index.sequence = seqIndexUncompressed
 		case seqIndexUncompressed:
 			s.index.hash.uncompressed += s.vli
-			var buf [2*8 + 4]byte // 2*Sizeof(vliType)+Sizeof(uint32)
+			var buf [2 * 8]byte // 2*Sizeof(vliType)
 			putLE64(uint64(s.index.hash.unpadded), buf[:])
 			putLE64(uint64(s.index.hash.uncompressed), buf[8:])
-			putLE32(s.index.hash.crc32, buf[16:])
-			s.index.hash.crc32 = xzCRC32(buf[:], s.index.hash.crc32)
+			_, _ = s.index.hash.sha256.Write(buf[:])
 			s.index.count--
 			s.index.sequence = seqIndexUnpadded
 		}
@@ -709,7 +708,8 @@ func decMain(s *xzDec, b *xzBuf) xzRet {
 			/* Finish the CRC32 value and Index size. */
 			indexUpdate(s, b)
 			/* Compare the hashes to validate the Index field. */
-			if s.block.hash != s.index.hash {
+			if !bytes.Equal(
+				s.block.hash.sha256.Sum(nil), s.index.hash.sha256.Sum(nil)) {
 				return xzDataError
 			}
 			s.sequence = seqIndexCRC32
@@ -785,6 +785,8 @@ func xzDecInit(dictMax uint32) *xzDec {
 	s := new(xzDec)
 	s.bcj = xzDecBCJCreate()
 	s.lzma2 = xzDecLZMA2Create(dictMax)
+	s.block.hash.sha256 = sha256.New()
+	s.index.hash.sha256 = sha256.New()
 	xzDecReset(s)
 	return s
 }
@@ -802,18 +804,18 @@ func xzDecReset(s *xzDec) {
 	s.pos = 0
 	s.crc32 = 0
 	s.check = nil
-	s.block = struct {
-		compressed   vliType
-		uncompressed vliType
-		count        vliType
-		hash         xzDecHash
-	}{}
-	s.index = struct {
-		sequence xzDecIndexSeq
-		size     vliType
-		count    vliType
-		hash     xzDecHash
-	}{}
+	s.block.compressed = 0
+	s.block.uncompressed = 0
+	s.block.count = 0
+	s.block.hash.unpadded = 0
+	s.block.hash.uncompressed = 0
+	s.block.hash.sha256.Reset()
+	s.index.sequence = seqIndexCount
+	s.index.size = 0
+	s.index.count = 0
+	s.index.hash.unpadded = 0
+	s.index.hash.uncompressed = 0
+	s.index.hash.sha256.Reset()
 	s.temp.pos = 0
 	s.temp.buf = s.temp.bufArray[:streamHeaderSize]
 }
