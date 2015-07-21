@@ -434,12 +434,11 @@ func xzDecBCJCreate() *xzDecBCJ {
 }
 
 /*
- * Decode the Filter ID of a BCJ filter. This implementation doesn't
- * support custom start offsets, so no decoding of Filter Properties
- * is needed. Returns xzOK if the given Filter ID is supported.
- * Otherwise xzOptionsError is returned.
+ * Decode the Filter ID of a BCJ filter and check the start offset is
+ * valid. Returns xzOK if the given Filter ID and offset is
+ * supported. Otherwise xzOptionsError is returned.
  */
-func xzDecBCJReset(s *xzDecBCJ, id byte) xzRet {
+func xzDecBCJReset(s *xzDecBCJ, id byte, offset int) xzRet {
 	switch xzDecBCJType(id) {
 	case bcjX86:
 	case bcjPowerPC:
@@ -451,9 +450,24 @@ func xzDecBCJReset(s *xzDecBCJ, id byte) xzRet {
 		/* Unsupported Filter ID */
 		return xzOptionsError
 	}
+	// check offset is a multiple of alignment
+	switch xzDecBCJType(id) {
+	case bcjPowerPC, bcjARM, bcjSPARC:
+		if offset%4 != 0 {
+			return xzOptionsError
+		}
+	case bcjIA64:
+		if offset%16 != 0 {
+			return xzOptionsError
+		}
+	case bcjARMThumb:
+		if offset%2 != 0 {
+			return xzOptionsError
+		}
+	}
 	s.type_ = xzDecBCJType(id)
 	s.ret = xzOK
-	s.pos = 0
+	s.pos = offset
 	s.x86PrevMask = 0
 	s.temp.filtered = 0
 	s.temp.buf = nil

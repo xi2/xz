@@ -357,6 +357,11 @@ var unsupportedFiles = []testFile{
 
 var otherFiles = []testFile{
 	{
+		file:   "good-1-x86-lzma2-offset-2048.xz",
+		md5sum: "ce212d6a1cfe73d8395a2b42f94c2419",
+		err:    nil,
+	},
+	{
 		file:   "good-2-lzma2-corrupt.xz",
 		md5sum: "d9c5223e7e6e305e6c1c6ed73789df88",
 		err:    xz.ErrData,

@@ -533,19 +533,26 @@ func decBlockHeader(s *xzDec) xzRet {
 		if len(s.temp.buf)-s.temp.pos < 2 {
 			return xzDataError
 		}
-		ret = xzDecBCJReset(s.bcj, s.temp.buf[s.temp.pos])
-		s.temp.pos++
+		filterID := s.temp.buf[s.temp.pos]
+		s.temp.pos += 2
+		// BCJ Filter properties either 0 or 4 bytes
+		var startOffset int
+		switch s.temp.buf[s.temp.pos-1] {
+		case 0x00:
+			startOffset = 0
+		case 0x04:
+			if len(s.temp.buf)-s.temp.pos < 4 {
+				return xzDataError
+			}
+			startOffset = int(getLE32(s.temp.buf[s.temp.pos:]))
+			s.temp.pos += 4
+		default:
+			return xzOptionsError
+		}
+		ret = xzDecBCJReset(s.bcj, filterID, startOffset)
 		if ret != xzOK {
 			return ret
 		}
-		/*
-		 * We don't support custom start offset,
-		 * so Size of Properties must be zero.
-		 */
-		if s.temp.buf[s.temp.pos] != 0x00 {
-			return xzOptionsError
-		}
-		s.temp.pos++
 	}
 	/* Valid Filter Flags always take at least two bytes. */
 	if len(s.temp.buf)-s.temp.pos < 2 {
