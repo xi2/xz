@@ -830,7 +830,7 @@ func lzmaMain(s *xzDecLZMA2) bool {
 	 * lzmaInRequired - 1 bytes.
 	 */
 	for dictHasSpace(&s.dict) && !rcLimitExceeded(&s.rc) {
-		posState = uint32(s.dict.pos) & s.lzma.posMask
+		posState = s.dict.pos & s.lzma.posMask
 		if !rcBit(&s.rc, &s.lzma.isMatch[s.lzma.state][posState]) {
 			lzmaLiteral(s)
 		} else {
