@@ -88,8 +88,7 @@ func bcjX86Filter(s *xzDecBCJ, buf []byte) int {
 	if len(buf) <= 4 {
 		return 0
 	}
-	buf = buf[:len(buf)-4]
-	for i = 0; i < len(buf); i++ {
+	for i = 0; i < len(buf)-4; i++ {
 		if buf[i]&0xfe != 0xe8 {
 			continue
 		}
