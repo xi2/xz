@@ -503,12 +503,13 @@ func decBlockHeader(s *xzDec) xzRet {
 		if decVLI(s, s.temp.buf, &s.temp.pos) != xzStreamEnd {
 			return xzDataError
 		}
-		if s.vli >= 1<<63-6 {
-			// testdata/files/bad-1-block_header-4.xz
+		if s.vli >= 1<<63-8 {
+			// the whole block must stay smaller than 2^63 bytes
+			// the block header cannot be smaller than 8 bytes
 			return xzDataError
 		}
 		if s.vli == 0 {
-			// testdata/files/bad-1-block_header-5.xz
+			// compressed size must be non-zero
 			return xzDataError
 		}
 		s.blockHeader.compressed = s.vli
