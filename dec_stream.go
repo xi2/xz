@@ -621,6 +621,7 @@ func decBlockHeader(s *xzDec) xzRet {
 	for i := filterTotal - 2; i >= 0; i-- {
 		switch id := filterList[i].id; id {
 		case 0x03:
+			// delta filter
 			delta := xzDecDeltaCreate(int(filterList[i].props) + 1)
 			chain := s.chain
 			s.chain = func(b *xzBuf) xzRet {
