@@ -169,9 +169,12 @@ type xzDec struct {
 		buf      []byte // slice buf will be backed by bufArray
 		bufArray [1024]byte
 	}
-	lzma2     *xzDecLZMA2
-	bcj       *xzDecBCJ
-	bcjActive bool
+	// chain is the function (or to be more precise, closure) which
+	// does the decompression and will call into the lzma2 and other
+	// filter code as needed. It is constructed by decBlockHeader
+	chain func(b *xzBuf) xzRet
+	// lzma2 holds the state of the last filter (which must be LZMA2)
+	lzma2 *xzDecLZMA2
 }
 
 /* Sizes of the Check field with different Check IDs */
@@ -248,11 +251,7 @@ func decBlock(s *xzDec, b *xzBuf) xzRet {
 	var ret xzRet
 	s.inStart = b.inPos
 	s.outStart = b.outPos
-	if s.bcjActive {
-		ret = xzDecBCJRun(s.bcj, s.lzma2, b)
-	} else {
-		ret = xzDecLZMA2Run(s.lzma2, b)
-	}
+	ret = s.chain(b)
 	s.block.compressed += vliType(b.inPos - s.inStart)
 	s.block.uncompressed += vliType(b.outPos - s.outStart)
 	/*
@@ -489,10 +488,9 @@ func decBlockHeader(s *xzDec) xzRet {
 	}
 	s.temp.pos = 2
 	/*
-	 * Catch unsupported Block Flags. We support only one or two filters
-	 * in the chain, so we catch that with the same test.
+	 * Catch unsupported Block Flags.
 	 */
-	if s.temp.buf[1]&0x3E != 0 {
+	if s.temp.buf[1]&0x3C != 0 {
 		return xzOptionsError
 	}
 	/* Compressed Size */
@@ -522,39 +520,50 @@ func decBlockHeader(s *xzDec) xzRet {
 	} else {
 		s.blockHeader.uncompressed = vliUnknown
 	}
-	/* If there are two filters, the first one must be a BCJ filter. */
-	if s.temp.buf[1]&0x01 != 0 {
-		s.bcjActive = true
-	} else {
-		s.bcjActive = false
-	}
-	if s.bcjActive {
+	// get total number of filters (1-4)
+	filterTotal := int(s.temp.buf[1]&0x03) + 1
+	// slice to hold decoded filters
+	filterList := make([]struct {
+		id    byte
+		props uint32
+	}, filterTotal)
+	// decode the non-last filters which cannot be LZMA2
+	for i := 0; i < filterTotal-1; i++ {
 		/* Valid Filter Flags always take at least two bytes. */
 		if len(s.temp.buf)-s.temp.pos < 2 {
 			return xzDataError
 		}
-		filterID := s.temp.buf[s.temp.pos]
 		s.temp.pos += 2
-		// BCJ Filter properties either 0 or 4 bytes
-		var startOffset int
-		switch s.temp.buf[s.temp.pos-1] {
-		case 0x00:
-			startOffset = 0
-		case 0x04:
-			if len(s.temp.buf)-s.temp.pos < 4 {
-				return xzDataError
+		switch id := s.temp.buf[s.temp.pos-2]; id {
+		case 0x03:
+			// delta filter
+			return xzOptionsError
+		case 0x04, 0x05, 0x06, 0x07, 0x08, 0x09:
+			// bcj filter
+			var props uint32
+			switch s.temp.buf[s.temp.pos-1] {
+			case 0x00:
+				props = 0
+			case 0x04:
+				if len(s.temp.buf)-s.temp.pos < 4 {
+					return xzDataError
+				}
+				props = getLE32(s.temp.buf[s.temp.pos:])
+				s.temp.pos += 4
+			default:
+				return xzOptionsError
 			}
-			startOffset = int(getLE32(s.temp.buf[s.temp.pos:]))
-			s.temp.pos += 4
+			filterList[i] = struct {
+				id    byte
+				props uint32
+			}{id: id, props: props}
 		default:
 			return xzOptionsError
 		}
-		ret = xzDecBCJReset(s.bcj, filterID, startOffset)
-		if ret != xzOK {
-			return ret
-		}
 	}
-	/* Valid Filter Flags always take at least two bytes. */
+	/*
+	 * decode the last filter which must be LZMA2
+	 */
 	if len(s.temp.buf)-s.temp.pos < 2 {
 		return xzDataError
 	}
@@ -572,10 +581,44 @@ func decBlockHeader(s *xzDec) xzRet {
 	if len(s.temp.buf)-s.temp.pos < 1 {
 		return xzDataError
 	}
-	ret = xzDecLZMA2Reset(s.lzma2, s.temp.buf[s.temp.pos])
+	props := uint32(s.temp.buf[s.temp.pos])
 	s.temp.pos++
+	filterList[filterTotal-1] = struct {
+		id    byte
+		props uint32
+	}{id: 0x21, props: props}
+	/*
+	 * Process the filter list and create s.chain, going from last
+	 * filter (LZMA2) to first filter
+	 *
+	 * First, LZMA2.
+	 */
+	ret = xzDecLZMA2Reset(s.lzma2, byte(filterList[filterTotal-1].props))
 	if ret != xzOK {
 		return ret
+	}
+	s.chain = func(b *xzBuf) xzRet {
+		return xzDecLZMA2Run(s.lzma2, b)
+	}
+	/*
+	 * Now the non-last filters
+	 */
+	for i := filterTotal - 2; i >= 0; i-- {
+		switch id := filterList[i].id; id {
+		case 0x03:
+			// delta filter
+		case 0x04, 0x05, 0x06, 0x07, 0x08, 0x09:
+			// bcj filter
+			bcj := xzDecBCJCreate()
+			ret = xzDecBCJReset(bcj, id, int(filterList[i].props))
+			if ret != xzOK {
+				return ret
+			}
+			chain := s.chain
+			s.chain = func(b *xzBuf) xzRet {
+				return xzDecBCJRun(bcj, b, chain)
+			}
+		}
 	}
 	/* The rest must be Header Padding. */
 	for s.temp.pos < len(s.temp.buf) {
@@ -790,7 +833,6 @@ func xzDecRun(s *xzDec, b *xzBuf) xzRet {
  */
 func xzDecInit(dictMax uint32) *xzDec {
 	s := new(xzDec)
-	s.bcj = xzDecBCJCreate()
 	s.lzma2 = xzDecLZMA2Create(dictMax)
 	s.block.hash.sha256 = sha256.New()
 	s.index.hash.sha256 = sha256.New()

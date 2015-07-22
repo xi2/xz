@@ -19,14 +19,13 @@
 // The technical limitations, shared with XZ Embedded, are as follows:
 //
 //   - Only LZMA2 and BCJ filters are supported (no Delta filter).
-//   - A filter chain may consist of just a single LZMA2 filter or
-//     single BCJ + single LZMA2.
 //
 // Package xz has the following enhancements over XZ Embedded:
 //
 //   - All known block check types (including SHA256) are implemented.
 //   - Correct handling of multiple streams and stream padding.
 //   - BCJ filters can have a non-zero start offset.
+//   - Filter chains may be full length (up to 4 filters)
 //
 // See <http://tukaani.org/xz/xz-file-format.txt> for the specifics of
 // the XZ file format.

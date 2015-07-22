@@ -322,15 +322,13 @@ func bcjFlush(s *xzDecBCJ, b *xzBuf) {
 }
 
 /*
- * Decode raw BCJ + LZMA2 stream. This must be used only if there actually is
- * a BCJ filter in the chain. If the chain has only LZMA2, xzDecLZMA2Run
- * must be called directly.
+ * Decode raw stream which has a BCJ filter as the first filter.
  *
  * The BCJ filter functions are primitive in sense that they process the
  * data in chunks of 1-16 bytes. To hide this issue, this function does
  * some buffering.
  */
-func xzDecBCJRun(s *xzDecBCJ, lzma2 *xzDecLZMA2, b *xzBuf) xzRet {
+func xzDecBCJRun(s *xzDecBCJ, b *xzBuf, chain func(*xzBuf) xzRet) xzRet {
 	var outStart int
 	/*
 	 * Flush pending already filtered data to the output buffer. Return
@@ -362,7 +360,7 @@ func xzDecBCJRun(s *xzDecBCJ, lzma2 *xzDecLZMA2, b *xzBuf) xzRet {
 		outStart = b.outPos
 		copy(b.out[b.outPos:], s.temp.buf)
 		b.outPos += len(s.temp.buf)
-		s.ret = xzDecLZMA2Run(lzma2, b)
+		s.ret = chain(b)
 		if s.ret != xzStreamEnd && s.ret != xzOK {
 			return s.ret
 		}
@@ -401,7 +399,7 @@ func xzDecBCJRun(s *xzDecBCJ, lzma2 *xzDecLZMA2, b *xzBuf) xzRet {
 		s.outPos = b.outPos
 		b.out = s.temp.bufArray[:]
 		b.outPos = len(s.temp.buf)
-		s.ret = xzDecLZMA2Run(lzma2, b)
+		s.ret = chain(b)
 		s.temp.buf = s.temp.bufArray[:b.outPos]
 		b.out = s.out
 		b.outPos = s.outPos
