@@ -886,4 +886,5 @@ func xzDecReset(s *xzDec) {
 	s.index.hash.sha256.Reset()
 	s.temp.pos = 0
 	s.temp.buf = s.temp.bufArray[:streamHeaderSize]
+	s.chain = nil
 }
