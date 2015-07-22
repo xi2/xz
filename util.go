@@ -1,7 +1,7 @@
 /*
  * Package xz utility functions
  *
- * Authors: Michael Cross <https://xi2.org/x/xz>
+ * Author: Michael Cross <https://xi2.org/x/xz>
  *
  * This file has been put into the public domain.
  * You can do whatever you want with this file.
