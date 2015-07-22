@@ -105,7 +105,10 @@ type xzDec struct {
 	outStart int
 	/* CRC32 value in Index */
 	crc32 uint32
-	/* Hash used in Block (CRC32/CRC64/SHA256) */
+	/*
+	 * Hash used in Block (CRC32/CRC64/SHA256) - it is created by
+	 * decStreamHeader.
+	 */
 	check hash.Hash
 	/* Type of the integrity check calculated from uncompressed data */
 	checkType xzCheck
