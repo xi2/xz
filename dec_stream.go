@@ -540,7 +540,19 @@ func decBlockHeader(s *xzDec) xzRet {
 		switch id := s.temp.buf[s.temp.pos-2]; id {
 		case 0x03:
 			// delta filter
-			return xzOptionsError
+			if s.temp.buf[s.temp.pos-1] != 0x01 {
+				return xzOptionsError
+			}
+			/* Filter Properties contains distance - 1 */
+			if len(s.temp.buf)-s.temp.pos < 1 {
+				return xzDataError
+			}
+			props := uint32(s.temp.buf[s.temp.pos])
+			s.temp.pos++
+			filterList[i] = struct {
+				id    byte
+				props uint32
+			}{id: id, props: props}
 		case 0x04, 0x05, 0x06, 0x07, 0x08, 0x09:
 			// bcj filter
 			var props uint32
@@ -609,7 +621,11 @@ func decBlockHeader(s *xzDec) xzRet {
 	for i := filterTotal - 2; i >= 0; i-- {
 		switch id := filterList[i].id; id {
 		case 0x03:
-			// delta filter
+			delta := xzDecDeltaCreate(int(filterList[i].props) + 1)
+			chain := s.chain
+			s.chain = func(b *xzBuf) xzRet {
+				return xzDecDeltaRun(delta, b, chain)
+			}
 		case 0x04, 0x05, 0x06, 0x07, 0x08, 0x09:
 			// bcj filter
 			bcj := xzDecBCJCreate()

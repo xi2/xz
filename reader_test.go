@@ -242,8 +242,8 @@ var goodFiles = []testFile{
 	},
 	{
 		file:   "good-1-3delta-lzma2.xz",
-		md5sum: "d41d8cd98f00b204e9800998ecf8427e",
-		err:    xz.ErrOptions,
+		md5sum: "c214a5e586cb3f0673cc6138f7de25ab",
+		err:    nil,
 	},
 	{
 		file:   "good-1-block_header-1.xz",
@@ -282,8 +282,8 @@ var goodFiles = []testFile{
 	},
 	{
 		file:   "good-1-delta-lzma2.tiff.xz",
-		md5sum: "d41d8cd98f00b204e9800998ecf8427e",
-		err:    xz.ErrOptions,
+		md5sum: "c692be6d1987989af5eeafc329085ad2",
+		err:    nil,
 	},
 	{
 		file:   "good-1-lzma2-1.xz",
