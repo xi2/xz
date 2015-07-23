@@ -409,6 +409,45 @@ func testFileList(t *testing.T, dir string, files []testFile) {
 	}
 }
 
+func testFileListByteReads(t *testing.T, dir string, files []testFile) {
+	for _, f := range files {
+		func() {
+			fr, err := os.Open(filepath.Join("testdata", dir, f.file))
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer fr.Close()
+			hash := md5.New()
+			r, err := xz.NewReader(fr, 0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			b := make([]byte, 1)
+			var n int
+			for err == nil {
+				n, err = r.Read(b)
+				if err == nil && n != 1 {
+					t.Fatalf("%s: received no bytes, wanted 1 byte", f.file)
+				}
+				if n == 1 {
+					_, _ = hash.Write(b)
+				}
+			}
+			if err == io.EOF {
+				err = nil
+			}
+			if err != f.err {
+				t.Fatalf("%s: wanted error: %v, got: %v\n", f.file, f.err, err)
+			}
+			md5sum := fmt.Sprintf("%x", hash.Sum(nil))
+			if f.md5sum != md5sum {
+				t.Fatalf(
+					"%s: wanted md5: %v, got: %v\n", f.file, f.md5sum, md5sum)
+			}
+		}()
+	}
+}
+
 func TestBadFiles(t *testing.T) {
 	testFileList(t, "xz-utils", badFiles)
 }
@@ -496,6 +535,23 @@ func TestMultipleBadReads(t *testing.T) {
 		t.Fatalf("Read returned: (%d,%v), expected: (0,%v)\n",
 			n, err, xz.ErrData)
 	}
+}
+
+// TestByteReads decodes the test files one byte at a time. This
+// should exercise the stream decoder and filter code nicely by
+// testing most of the xzOK exits paths.
+func TestByteReads(t *testing.T) {
+	fileList := badFiles
+	fileList = append(fileList, goodFiles...)
+	fileList = append(fileList, unsupportedFiles...)
+	testFileListByteReads(t, "xz-utils", fileList)
+	fileList = []testFile{}
+	for _, f := range otherFiles {
+		if f.file != "zeros-100mb.xz" {
+			fileList = append(fileList, f)
+		}
+	}
+	testFileListByteReads(t, "other", fileList)
 }
 
 // Multistream is tested in example_test.go
