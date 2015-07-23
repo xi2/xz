@@ -132,10 +132,6 @@ func (r *Reader) Read(p []byte) (n int, err error) {
 			err = io.EOF
 			break
 		}
-		// return immediately if given a zero length output buffer
-		if len(p) == 0 {
-			return
-		}
 		// if p full, return with err == nil
 		if n == len(p) {
 			break
