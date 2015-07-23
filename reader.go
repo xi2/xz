@@ -50,8 +50,8 @@ func NewReader(r io.Reader, dictMax uint32) (*Reader, error) {
 	return &Reader{
 		r:           r,
 		multistream: true,
-		buf:         &xzBuf{},
 		padding:     -1,
+		buf:         &xzBuf{},
 		dec:         xzDecInit(dictMax),
 	}, nil
 }
