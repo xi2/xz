@@ -127,14 +127,14 @@ func (r *Reader) Read(p []byte) (n int, err error) {
 		if err != nil {
 			break
 		}
-		// return immediately if given a zero length output buffer
-		if len(p) == 0 {
-			return
-		}
 		// if decoder has finished, return with err == io.EOF
 		if r.dEOF {
 			err = io.EOF
 			break
+		}
+		// return immediately if given a zero length output buffer
+		if len(p) == 0 {
+			return
 		}
 		// if p full, return with err == nil
 		if n == len(p) {
