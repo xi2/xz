@@ -29,8 +29,8 @@ var (
 // created with XZ Utils "xz -9".
 const DefaultDictMax = 1 << 26 // 64 MiB
 
-// bufSize is the input/output buffer size used by the decoder.
-const bufSize = 1 << 13 // 8 KiB
+// inBufSize is the input buffer size used by the decoder.
+const inBufSize = 1 << 13 // 8 KiB
 
 // NewReader creates a new Reader reading from r. The decompressor
 // will use an LZMA2 dictionary size up to dictMax bytes in
@@ -50,11 +50,9 @@ func NewReader(r io.Reader, dictMax uint32) (*Reader, error) {
 	return &Reader{
 		r:           r,
 		multistream: true,
-		buf: &xzBuf{
-			out: make([]byte, bufSize),
-		},
-		padding: -1,
-		dec:     xzDecInit(dictMax),
+		buf:         &xzBuf{},
+		padding:     -1,
+		dec:         xzDecInit(dictMax),
 	}, nil
 }
 
@@ -65,16 +63,15 @@ func NewReader(r io.Reader, dictMax uint32) (*Reader, error) {
 // files. Reads from the Reader return the concatenation of the
 // uncompressed data of each.
 type Reader struct {
-	r           io.Reader     // the wrapped io.Reader
-	multistream bool          // true if reader is in multistream mode
-	rEOF        bool          // true after io.EOF received on r
-	dEOF        bool          // true after decoder has completed
-	padding     int           // bytes of stream padding read (or -1)
-	in          [bufSize]byte // backing array for buf.in
-	outPos      int           // pos within buf.out of unwritten data
-	buf         *xzBuf        // decoder input/output buffers
-	dec         *xzDec        // decoder state
-	err         error         // the result of the last decoder call
+	r           io.Reader       // the wrapped io.Reader
+	multistream bool            // true if reader is in multistream mode
+	rEOF        bool            // true after io.EOF received on r
+	dEOF        bool            // true after decoder has completed
+	padding     int             // bytes of stream padding read (or -1)
+	in          [inBufSize]byte // backing array for buf.in
+	buf         *xzBuf          // decoder input/output buffers
+	dec         *xzDec          // decoder state
+	err         error           // the result of the last decoder call
 }
 
 // decode is a wrapper around xzDecRun that additionally handles
@@ -112,8 +109,6 @@ func (r *Reader) decode() (ret xzRet) {
 			}
 		}
 	} else {
-		r.buf.outPos = 0
-		r.outPos = 0
 		ret = xzDecRun(r.dec, r.buf)
 	}
 	return
@@ -122,26 +117,23 @@ func (r *Reader) decode() (ret xzRet) {
 func (r *Reader) Read(p []byte) (n int, err error) {
 	// restore err
 	err = r.err
+	// set decoder output buffer to p
+	r.buf.out = p
+	r.buf.outPos = 0
 	for {
-		// copy r.buf.out -> p
-		for r.outPos < r.buf.outPos && n < len(p) {
-			p[n] = r.buf.out[r.outPos]
-			n++
-			r.outPos++
-		}
-		// if p full but output remaining, return with err == nil
-		if r.outPos < r.buf.outPos && n == len(p) {
-			err = nil
-			break
-		}
-		// all output written. if last call to decoder ended with an
-		// error, return that error
+		// update n
+		n = r.buf.outPos
+		// if last call to decoder ended with an error, return that error
 		if err != nil {
 			break
 		}
 		// if decoder has finished, return with err == io.EOF
 		if r.dEOF {
 			err = io.EOF
+			break
+		}
+		// if p full, return with err == nil
+		if n == len(p) {
 			break
 		}
 		// if needed, read more data from r.r
