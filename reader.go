@@ -14,6 +14,7 @@ import (
 	"io"
 )
 
+// Package specific errors.
 var (
 	ErrUnsupportedCheck = errors.New("xz: integrity check type not supported")
 	ErrMemlimit         = errors.New("xz: LZMA2 dictionary size exceeds max")
