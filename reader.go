@@ -14,7 +14,6 @@ import (
 	"io"
 )
 
-// Package specific errors.
 var (
 	ErrUnsupportedCheck = errors.New("xz: integrity check type not supported")
 	ErrMemlimit         = errors.New("xz: LZMA2 dictionary size exceeds max")
@@ -30,11 +29,8 @@ var (
 // created with XZ Utils "xz -9".
 const DefaultDictMax = 1 << 26 // 64 MiB
 
-// InBufSize is the input buffer size used when initializing the
-// decoder with NewReader. It is exposed mainly for use by the testing
-// code and, as an implementation detail, it is not recommended to
-// change it.
-var InBufSize = 1 << 13 // 8 KiB
+// inBufSize is the input buffer size used by the decoder.
+const inBufSize = 1 << 13 // 8 KiB
 
 // NewReader creates a new Reader reading from r. The decompressor
 // will use an LZMA2 dictionary size up to dictMax bytes in
@@ -55,7 +51,6 @@ func NewReader(r io.Reader, dictMax uint32) (*Reader, error) {
 		r:           r,
 		multistream: true,
 		padding:     -1,
-		in:          make([]byte, InBufSize),
 		buf:         &xzBuf{},
 		dec:         xzDecInit(dictMax),
 	}, nil
@@ -68,15 +63,15 @@ func NewReader(r io.Reader, dictMax uint32) (*Reader, error) {
 // files. Reads from the Reader return the concatenation of the
 // uncompressed data of each.
 type Reader struct {
-	r           io.Reader // the wrapped io.Reader
-	multistream bool      // true if reader is in multistream mode
-	rEOF        bool      // true after io.EOF received on r
-	dEOF        bool      // true after decoder has completed
-	padding     int       // bytes of stream padding read (or -1)
-	in          []byte    // backing slice for buf.in of size InBufSize
-	buf         *xzBuf    // decoder input/output buffers
-	dec         *xzDec    // decoder state
-	err         error     // the result of the last decoder call
+	r           io.Reader       // the wrapped io.Reader
+	multistream bool            // true if reader is in multistream mode
+	rEOF        bool            // true after io.EOF received on r
+	dEOF        bool            // true after decoder has completed
+	padding     int             // bytes of stream padding read (or -1)
+	in          [inBufSize]byte // backing array for buf.in
+	buf         *xzBuf          // decoder input/output buffers
+	dec         *xzDec          // decoder state
+	err         error           // the result of the last decoder call
 }
 
 // decode is a wrapper around xzDecRun that additionally handles
