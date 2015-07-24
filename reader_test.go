@@ -18,6 +18,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"testing/iotest"
 
 	"xi2.org/x/xz"
 )
@@ -383,7 +384,11 @@ var otherFiles = []testFile{
 	},
 }
 
-func testFileList(t *testing.T, dir string, files []testFile) {
+// testFileList tests the decoding a list of files against their
+// expected error and md5sum. oneByte controls whether the input
+// reader to xz.NewReader is a normal reader or created using
+// iotest.OneByteReader.
+func testFileList(t *testing.T, dir string, files []testFile, oneByte bool) {
 	for _, f := range files {
 		func() {
 			fr, err := os.Open(filepath.Join("testdata", dir, f.file))
@@ -391,8 +396,14 @@ func testFileList(t *testing.T, dir string, files []testFile) {
 				t.Fatal(err)
 			}
 			defer fr.Close()
+			var ur io.Reader
+			if oneByte {
+				ur = iotest.OneByteReader(fr)
+			} else {
+				ur = fr
+			}
 			hash := md5.New()
-			r, err := xz.NewReader(fr, 0)
+			r, err := xz.NewReader(ur, 0)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -409,59 +420,20 @@ func testFileList(t *testing.T, dir string, files []testFile) {
 	}
 }
 
-func testFileListByteReads(t *testing.T, dir string, files []testFile) {
-	for _, f := range files {
-		func() {
-			fr, err := os.Open(filepath.Join("testdata", dir, f.file))
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer fr.Close()
-			hash := md5.New()
-			r, err := xz.NewReader(fr, 0)
-			if err != nil {
-				t.Fatal(err)
-			}
-			b := make([]byte, 1)
-			var n int
-			for err == nil {
-				n, err = r.Read(b)
-				if err == nil && n != 1 {
-					t.Fatalf("%s: received no bytes, wanted 1 byte", f.file)
-				}
-				if n == 1 {
-					_, _ = hash.Write(b)
-				}
-			}
-			if err == io.EOF {
-				err = nil
-			}
-			if err != f.err {
-				t.Fatalf("%s: wanted error: %v, got: %v\n", f.file, f.err, err)
-			}
-			md5sum := fmt.Sprintf("%x", hash.Sum(nil))
-			if f.md5sum != md5sum {
-				t.Fatalf(
-					"%s: wanted md5: %v, got: %v\n", f.file, f.md5sum, md5sum)
-			}
-		}()
-	}
-}
-
 func TestBadFiles(t *testing.T) {
-	testFileList(t, "xz-utils", badFiles)
+	testFileList(t, "xz-utils", badFiles, false)
 }
 
 func TestGoodFiles(t *testing.T) {
-	testFileList(t, "xz-utils", goodFiles)
+	testFileList(t, "xz-utils", goodFiles, false)
 }
 
 func TestUnsupportedFiles(t *testing.T) {
-	testFileList(t, "xz-utils", unsupportedFiles)
+	testFileList(t, "xz-utils", unsupportedFiles, false)
 }
 
 func TestOtherFiles(t *testing.T) {
-	testFileList(t, "other", otherFiles)
+	testFileList(t, "other", otherFiles, false)
 }
 
 func TestMemlimit(t *testing.T) {
@@ -537,21 +509,19 @@ func TestMultipleBadReads(t *testing.T) {
 	}
 }
 
-// TestByteReads decodes the test files one byte at a time. This
-// should exercise the stream decoder and filter code nicely by
-// testing most of the xzOK exits paths.
+// TestByteReads decodes the test files one byte of input and one byte
+// of output at a time. This should exercise the stream decoder and
+// filter code nicely by testing most of the xzOK exits paths.
 func TestByteReads(t *testing.T) {
-	fileList := badFiles
-	fileList = append(fileList, goodFiles...)
-	fileList = append(fileList, unsupportedFiles...)
-	testFileListByteReads(t, "xz-utils", fileList)
-	fileList = []testFile{}
-	for _, f := range otherFiles {
-		if f.file != "zeros-100mb.xz" {
-			fileList = append(fileList, f)
-		}
-	}
-	testFileListByteReads(t, "other", fileList)
+	oldInBufSize := xz.InBufSize
+	xz.InBufSize = 1
+	defer func() {
+		xz.InBufSize = oldInBufSize
+	}()
+	testFileList(t, "xz-utils", badFiles, true)
+	testFileList(t, "xz-utils", goodFiles, true)
+	testFileList(t, "xz-utils", unsupportedFiles, true)
+	testFileList(t, "other", otherFiles, true)
 }
 
 // Multistream is tested in example_test.go
