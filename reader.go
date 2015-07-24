@@ -92,7 +92,7 @@ func (r *Reader) decode() (ret xzRet) {
 		case r.buf.inPos == len(r.buf.in) && r.rEOF:
 			// case: out of padding. no more input data available
 			if r.padding%4 != 0 {
-				ret = xzBufError
+				ret = xzDataError
 			} else {
 				ret = xzStreamEnd
 			}

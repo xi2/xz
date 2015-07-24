@@ -76,7 +76,7 @@ var badFiles = []testFile{
 	{
 		file:   "bad-0pad-empty.xz",
 		md5sum: "d41d8cd98f00b204e9800998ecf8427e",
-		err:    xz.ErrBuf,
+		err:    xz.ErrData,
 	},
 	{
 		file:   "bad-1-block_header-1.xz",
