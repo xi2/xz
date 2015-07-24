@@ -384,7 +384,7 @@ var otherFiles = []testFile{
 	},
 }
 
-// testFileList tests the decoding a list of files against their
+// testFileList tests the decoding of a list of files against their
 // expected error and md5sum. oneByte controls whether the input
 // reader to xz.NewReader is a normal reader or created using
 // iotest.OneByteReader.
