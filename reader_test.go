@@ -18,6 +18,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"testing/iotest"
 
 	"xi2.org/x/xz"
 )
@@ -383,6 +384,8 @@ var otherFiles = []testFile{
 	},
 }
 
+// testFileList tests the decoding of a list of files against their
+// expected error and md5sum.
 func testFileList(t *testing.T, dir string, files []testFile) {
 	for _, f := range files {
 		func() {
@@ -409,6 +412,9 @@ func testFileList(t *testing.T, dir string, files []testFile) {
 	}
 }
 
+// testFileListByteReads tests the decoding of a list of files against
+// their expected error and md5sum. It uses a one byte input buffer
+// and one byte output buffer for each run of the decoder.
 func testFileListByteReads(t *testing.T, dir string, files []testFile) {
 	for _, f := range files {
 		func() {
@@ -418,7 +424,8 @@ func testFileListByteReads(t *testing.T, dir string, files []testFile) {
 			}
 			defer fr.Close()
 			hash := md5.New()
-			r, err := xz.NewReader(fr, 0)
+			obr := iotest.OneByteReader(fr)
+			r, err := xz.NewReader(obr, 0)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -426,9 +433,6 @@ func testFileListByteReads(t *testing.T, dir string, files []testFile) {
 			var n int
 			for err == nil {
 				n, err = r.Read(b)
-				if err == nil && n != 1 {
-					t.Fatalf("%s: received no bytes, wanted 1 byte", f.file)
-				}
 				if n == 1 {
 					_, _ = hash.Write(b)
 				}
@@ -537,9 +541,9 @@ func TestMultipleBadReads(t *testing.T) {
 	}
 }
 
-// TestByteReads decodes the test files one byte at a time. This
-// should exercise the stream decoder and filter code nicely by
-// testing most of the xzOK exits paths.
+// TestByteReads decodes the test files with a one byte input buffer
+// and one byte output buffer. This should exercise the stream decoder
+// and filter code nicely by testing most of the xzOK exits paths.
 func TestByteReads(t *testing.T) {
 	fileList := badFiles
 	fileList = append(fileList, goodFiles...)
