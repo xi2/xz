@@ -8,7 +8,7 @@
 // Implementation
 //
 // This package is a translation from C to Go of XZ Embedded
-// <http://tukaani.org/xz/embedded.html>, with enhancements made to
+// (http://tukaani.org/xz/embedded.html), with enhancements made to
 // bring it into full compliance with the XZ file format specification
 // v1.0.4. It supports all filters and block check types, supports
 // multiple streams, and performs index verification using SHA-256 as
@@ -24,5 +24,5 @@
 // Bug reports
 //
 // For bug reports relating to this package please contact the author
-// through <https://xi2.org/x/xz>, and not the authors of XZ Embedded.
+// through https://xi2.org/x/xz, and not the authors of XZ Embedded.
 package xz
