@@ -18,12 +18,12 @@ package xz
 type xzDecBCJType int
 
 const (
-	bcjX86 xzDecBCJType = 4 + iota
-	bcjPowerPC
-	bcjIA64
-	bcjARM
-	bcjARMThumb
-	bcjSPARC
+	bcjX86      xzDecBCJType = 4
+	bcjPowerPC  xzDecBCJType = 5
+	bcjIA64     xzDecBCJType = 6
+	bcjARM      xzDecBCJType = 7
+	bcjARMThumb xzDecBCJType = 8
+	bcjSPARC    xzDecBCJType = 9
 )
 
 type xzDecBCJ struct {
