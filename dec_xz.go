@@ -91,7 +91,7 @@ func xzCRC32(buf []byte, crc uint32) uint32 {
 }
 
 /* All XZ filter IDs */
-type xzFilterID byte
+type xzFilterID int64
 
 const (
 	idDelta       xzFilterID = 0x03
