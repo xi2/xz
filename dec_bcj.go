@@ -14,21 +14,9 @@ package xz
 
 /* from linux/lib/xz/xz_dec_bcj.c *************************************/
 
-// type of xzDecBCJ.type_
-type xzDecBCJType int
-
-const (
-	bcjX86      xzDecBCJType = 0x04
-	bcjPowerPC  xzDecBCJType = 0x05
-	bcjIA64     xzDecBCJType = 0x06
-	bcjARM      xzDecBCJType = 0x07
-	bcjARMThumb xzDecBCJType = 0x08
-	bcjSPARC    xzDecBCJType = 0x09
-)
-
 type xzDecBCJ struct {
 	/* Type of the BCJ filter being used */
-	type_ xzDecBCJType
+	type_ xzFilterID
 	/*
 	 * Return value of the next filter in the chain. We need to preserve
 	 * this information across calls, because we must not call the next
@@ -284,17 +272,17 @@ func bcjApply(s *xzDecBCJ, buf []byte, pos *int) {
 	var filtered int
 	buf = buf[*pos:]
 	switch s.type_ {
-	case bcjX86:
+	case idBCJX86:
 		filtered = bcjX86Filter(s, buf)
-	case bcjPowerPC:
+	case idBCJPowerPC:
 		filtered = bcjPowerPCFilter(s, buf)
-	case bcjIA64:
+	case idBCJIA64:
 		filtered = bcjIA64Filter(s, buf)
-	case bcjARM:
+	case idBCJARM:
 		filtered = bcjARMFilter(s, buf)
-	case bcjARMThumb:
+	case idBCJARMThumb:
 		filtered = bcjARMThumbFilter(s, buf)
-	case bcjSPARC:
+	case idBCJSPARC:
 		filtered = bcjSPARCFilter(s, buf)
 	default:
 		/* Never reached */
@@ -436,34 +424,34 @@ func xzDecBCJCreate() *xzDecBCJ {
  * valid. Returns xzOK if the given Filter ID and offset is
  * supported. Otherwise xzOptionsError is returned.
  */
-func xzDecBCJReset(s *xzDecBCJ, id byte, offset int) xzRet {
-	switch xzDecBCJType(id) {
-	case bcjX86:
-	case bcjPowerPC:
-	case bcjIA64:
-	case bcjARM:
-	case bcjARMThumb:
-	case bcjSPARC:
+func xzDecBCJReset(s *xzDecBCJ, id xzFilterID, offset int) xzRet {
+	switch id {
+	case idBCJX86:
+	case idBCJPowerPC:
+	case idBCJIA64:
+	case idBCJARM:
+	case idBCJARMThumb:
+	case idBCJSPARC:
 	default:
 		/* Unsupported Filter ID */
 		return xzOptionsError
 	}
 	// check offset is a multiple of alignment
-	switch xzDecBCJType(id) {
-	case bcjPowerPC, bcjARM, bcjSPARC:
+	switch id {
+	case idBCJPowerPC, idBCJARM, idBCJSPARC:
 		if offset%4 != 0 {
 			return xzOptionsError
 		}
-	case bcjIA64:
+	case idBCJIA64:
 		if offset%16 != 0 {
 			return xzOptionsError
 		}
-	case bcjARMThumb:
+	case idBCJARMThumb:
 		if offset%2 != 0 {
 			return xzOptionsError
 		}
 	}
-	s.type_ = xzDecBCJType(id)
+	s.type_ = id
 	s.ret = xzOK
 	s.pos = offset
 	s.x86PrevMask = 0

@@ -527,7 +527,7 @@ func decBlockHeader(s *xzDec) xzRet {
 	filterTotal := int(s.temp.buf[1]&0x03) + 1
 	// slice to hold decoded filters
 	filterList := make([]struct {
-		id    byte
+		id    xzFilterID
 		props uint32
 	}, filterTotal)
 	// decode the non-last filters which cannot be LZMA2
@@ -537,8 +537,8 @@ func decBlockHeader(s *xzDec) xzRet {
 			return xzDataError
 		}
 		s.temp.pos += 2
-		switch id := s.temp.buf[s.temp.pos-2]; id {
-		case 0x03:
+		switch id := xzFilterID(s.temp.buf[s.temp.pos-2]); id {
+		case idDelta:
 			// delta filter
 			if s.temp.buf[s.temp.pos-1] != 0x01 {
 				return xzOptionsError
@@ -550,10 +550,11 @@ func decBlockHeader(s *xzDec) xzRet {
 			props := uint32(s.temp.buf[s.temp.pos])
 			s.temp.pos++
 			filterList[i] = struct {
-				id    byte
+				id    xzFilterID
 				props uint32
 			}{id: id, props: props}
-		case 0x04, 0x05, 0x06, 0x07, 0x08, 0x09:
+		case idBCJX86, idBCJPowerPC, idBCJIA64,
+			idBCJARM, idBCJARMThumb, idBCJSPARC:
 			// bcj filter
 			var props uint32
 			switch s.temp.buf[s.temp.pos-1] {
@@ -569,7 +570,7 @@ func decBlockHeader(s *xzDec) xzRet {
 				return xzOptionsError
 			}
 			filterList[i] = struct {
-				id    byte
+				id    xzFilterID
 				props uint32
 			}{id: id, props: props}
 		default:
@@ -583,7 +584,7 @@ func decBlockHeader(s *xzDec) xzRet {
 		return xzDataError
 	}
 	/* Filter ID = LZMA2 */
-	if s.temp.buf[s.temp.pos] != 0x21 {
+	if xzFilterID(s.temp.buf[s.temp.pos]) != idLZMA2 {
 		return xzOptionsError
 	}
 	s.temp.pos++
@@ -599,9 +600,9 @@ func decBlockHeader(s *xzDec) xzRet {
 	props := uint32(s.temp.buf[s.temp.pos])
 	s.temp.pos++
 	filterList[filterTotal-1] = struct {
-		id    byte
+		id    xzFilterID
 		props uint32
-	}{id: 0x21, props: props}
+	}{id: idLZMA2, props: props}
 	/*
 	 * Process the filter list and create s.chain, going from last
 	 * filter (LZMA2) to first filter
@@ -620,14 +621,15 @@ func decBlockHeader(s *xzDec) xzRet {
 	 */
 	for i := filterTotal - 2; i >= 0; i-- {
 		switch id := filterList[i].id; id {
-		case 0x03:
+		case idDelta:
 			// delta filter
 			delta := xzDecDeltaCreate(int(filterList[i].props) + 1)
 			chain := s.chain
 			s.chain = func(b *xzBuf) xzRet {
 				return xzDecDeltaRun(delta, b, chain)
 			}
-		case 0x04, 0x05, 0x06, 0x07, 0x08, 0x09:
+		case idBCJX86, idBCJPowerPC, idBCJIA64,
+			idBCJARM, idBCJARMThumb, idBCJSPARC:
 			// bcj filter
 			bcj := xzDecBCJCreate()
 			ret = xzDecBCJReset(bcj, id, int(filterList[i].props))

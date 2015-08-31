@@ -89,3 +89,17 @@ var xzCRC64Table = crc64.MakeTable(crc64.ECMA)
 func xzCRC32(buf []byte, crc uint32) uint32 {
 	return crc32.Update(crc, xzCRC32Table, buf)
 }
+
+/* All XZ filter IDs */
+type xzFilterID byte
+
+const (
+	idDelta       xzFilterID = 0x03
+	idBCJX86      xzFilterID = 0x04
+	idBCJPowerPC  xzFilterID = 0x05
+	idBCJIA64     xzFilterID = 0x06
+	idBCJARM      xzFilterID = 0x07
+	idBCJARMThumb xzFilterID = 0x08
+	idBCJSPARC    xzFilterID = 0x09
+	idLZMA2       xzFilterID = 0x21
+)
