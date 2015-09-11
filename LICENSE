@@ -16,22 +16,3 @@ Licensing of xi2.org/x/xz
     files.
 
     This software is provided "as is", without any warranty.
-
-Licensing of XZ Embedded (the full contents of COPYING)
-=======================================================
-
-    All the files in this package have been written by Lasse Collin
-    and/or Igor Pavlov. All these files have been put into the public
-    domain. You can do whatever you want with these files.
-
-    As usual, this software is provided "as is", without any
-    warranty.
-
-Licensing of XZ Utils test files (quoting from testdata/xz-utils/README)
-========================================================================
-
-    This directory contains bunch of files to test handling of .xz
-    files in .xz decoder implementations. Many of the files have been
-    created by hand with a hex editor, thus there is no better "source
-    code" than the files themselves. All the test files (*.xz) and
-    this README have been put into the public domain.
