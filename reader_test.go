@@ -368,8 +368,8 @@ var otherFiles = []testFile{
 		err:    xz.ErrData,
 	},
 	{
-		file:   "pg2242.txt.xz",
-		md5sum: "0b4e9c76f4dff77d72f541e5b2845f5e",
+		file:   "words.xz",
+		md5sum: "00e28a90cb4a975fdaa3b375d3124a66",
 		err:    nil,
 	},
 	{
@@ -470,7 +470,7 @@ func TestOtherFiles(t *testing.T) {
 
 func TestMemlimit(t *testing.T) {
 	data, err := ioutil.ReadFile(
-		filepath.Join("testdata", "other", "pg2242.txt.xz"))
+		filepath.Join("testdata", "other", "words.xz"))
 	if err != nil {
 		t.Fatal(err)
 	}
