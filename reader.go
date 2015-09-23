@@ -79,57 +79,57 @@ type Reader struct {
 // stream padding. It treats the padding as a kind of stream that
 // decodes to nothing.
 //
-// When decoding padding, r.padding >= 0
-// When decoding a real stream, r.padding == -1
-func (r *Reader) decode() (ret xzRet) {
-	if r.padding >= 0 {
+// When decoding padding, z.padding >= 0
+// When decoding a real stream, z.padding == -1
+func (z *Reader) decode() (ret xzRet) {
+	if z.padding >= 0 {
 		// read all padding in input buffer
-		for r.buf.inPos < len(r.buf.in) &&
-			r.buf.in[r.buf.inPos] == 0 {
-			r.buf.inPos++
-			r.padding++
+		for z.buf.inPos < len(z.buf.in) &&
+			z.buf.in[z.buf.inPos] == 0 {
+			z.buf.inPos++
+			z.padding++
 		}
 		switch {
-		case r.buf.inPos == len(r.buf.in) && r.rEOF:
+		case z.buf.inPos == len(z.buf.in) && z.rEOF:
 			// case: out of padding. no more input data available
-			if r.padding%4 != 0 {
+			if z.padding%4 != 0 {
 				ret = xzDataError
 			} else {
 				ret = xzStreamEnd
 			}
-		case r.buf.inPos == len(r.buf.in):
+		case z.buf.inPos == len(z.buf.in):
 			// case: read more padding next loop iteration
 			ret = xzOK
 		default:
 			// case: out of padding. more input data available
-			if r.padding%4 != 0 {
+			if z.padding%4 != 0 {
 				ret = xzDataError
 			} else {
-				xzDecReset(r.dec)
+				xzDecReset(z.dec)
 				ret = xzStreamEnd
 			}
 		}
 	} else {
-		ret = xzDecRun(r.dec, r.buf)
+		ret = xzDecRun(z.dec, z.buf)
 	}
 	return
 }
 
-func (r *Reader) Read(p []byte) (n int, err error) {
+func (z *Reader) Read(p []byte) (n int, err error) {
 	// restore err
-	err = r.err
+	err = z.err
 	// set decoder output buffer to p
-	r.buf.out = p
-	r.buf.outPos = 0
+	z.buf.out = p
+	z.buf.outPos = 0
 	for {
 		// update n
-		n = r.buf.outPos
+		n = z.buf.outPos
 		// if last call to decoder ended with an error, return that error
 		if err != nil {
 			break
 		}
 		// if decoder has finished, return with err == io.EOF
-		if r.dEOF {
+		if z.dEOF {
 			err = io.EOF
 			break
 		}
@@ -137,34 +137,34 @@ func (r *Reader) Read(p []byte) (n int, err error) {
 		if n == len(p) {
 			break
 		}
-		// if needed, read more data from r.r
-		if r.buf.inPos == len(r.buf.in) && !r.rEOF {
-			rn, e := r.r.Read(r.in[:])
+		// if needed, read more data from z.r
+		if z.buf.inPos == len(z.buf.in) && !z.rEOF {
+			rn, e := z.r.Read(z.in[:])
 			if e != nil && e != io.EOF {
 				// read error
 				err = e
 				break
 			}
 			if e == io.EOF {
-				r.rEOF = true
+				z.rEOF = true
 			}
-			// set new input buffer in r.buf
-			r.buf.in = r.in[:rn]
-			r.buf.inPos = 0
+			// set new input buffer in z.buf
+			z.buf.in = z.in[:rn]
+			z.buf.inPos = 0
 		}
 		// decode more data
-		ret := r.decode()
+		ret := z.decode()
 		switch ret {
 		case xzOK:
 			// no action needed
 		case xzStreamEnd:
-			if r.padding >= 0 {
-				r.padding = -1
-				if !r.multistream || r.rEOF == true {
-					r.dEOF = true
+			if z.padding >= 0 {
+				z.padding = -1
+				if !z.multistream || z.rEOF == true {
+					z.dEOF = true
 				}
 			} else {
-				r.padding = 0
+				z.padding = 0
 			}
 		case xzUnsupportedCheck:
 			err = ErrUnsupportedCheck
@@ -180,7 +180,7 @@ func (r *Reader) Read(p []byte) (n int, err error) {
 			err = ErrBuf
 		}
 		// save err
-		r.err = err
+		z.err = err
 	}
 	return
 }
@@ -199,24 +199,24 @@ func (r *Reader) Read(p []byte) (n int, err error) {
 // behaviour can be useful when reading file formats that distinguish
 // individual XZ streams. In this mode, when the Reader reaches the
 // end of the stream, Read returns io.EOF. To start the next stream,
-// call r.Reset() followed by r.Multistream(false). If there is no
-// next stream, r.Reset() will return io.EOF.
-func (r *Reader) Multistream(ok bool) {
-	r.multistream = ok
+// call z.Reset() followed by z.Multistream(false). If there is no
+// next stream, z.Reset() will return io.EOF.
+func (z *Reader) Multistream(ok bool) {
+	z.multistream = ok
 }
 
 // Reset prepares the reader to read follow on streams when it is not
 // in multistream mode and it has finished reading a stream. It also
 // resets multistream mode to true (the default). If there are no
 // follow on streams, Reset returns io.EOF.
-func (r *Reader) Reset() error {
-	if !r.dEOF {
+func (z *Reader) Reset() error {
+	if !z.dEOF {
 		return nil
 	}
-	if r.rEOF {
+	if z.rEOF {
 		return io.EOF
 	}
-	r.dEOF = false
-	r.multistream = true
+	z.dEOF = false
+	z.multistream = true
 	return nil
 }
