@@ -414,6 +414,21 @@ func readTestFile(file string) ([]byte, error) {
 	return nil, err
 }
 
+// testFileData returns the data (md5sum and err) associated with the
+// named testFile
+func testFileData(file string) (md5sum string, err error) {
+	fileList := badFiles
+	fileList = append(fileList, goodFiles...)
+	fileList = append(fileList, unsupportedFiles...)
+	fileList = append(fileList, otherFiles...)
+	for _, f := range fileList {
+		if f.file == file {
+			return f.md5sum, f.err
+		}
+	}
+	return "", nil
+}
+
 // testFileList tests the decoding of a list of files against their
 // expected error and md5sum.
 func testFileList(t *testing.T, files []testFile, reuseReader bool) {
@@ -601,13 +616,6 @@ func TestMultistream(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var goodMD5 string
-	for _, f := range otherFiles {
-		if f.file == "words.xz" {
-			goodMD5 = f.md5sum
-			break
-		}
-	}
 	var readers []io.Reader
 	for i := 0; i < 10; i++ {
 		readers = append(readers, bytes.NewReader(data))
@@ -625,9 +633,10 @@ func TestMultistream(t *testing.T) {
 			t.Fatalf("io.Copy: wanted error: %v, got: %v\n", nil, err)
 		}
 		md5sum := fmt.Sprintf("%x", hash.Sum(nil))
-		if goodMD5 != md5sum {
+		wantedMD5, _ := testFileData("words.xz")
+		if wantedMD5 != md5sum {
 			t.Fatalf(
-				"hash.Sum: wanted md5: %v, got: %v\n", goodMD5, md5sum)
+				"hash.Sum: wanted md5: %v, got: %v\n", wantedMD5, md5sum)
 		}
 		err = r.Reset(nil)
 		var wantedErr error
@@ -662,13 +671,6 @@ func TestReuseReaderPartialReads(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var goodMD5 string
-	for _, f := range otherFiles {
-		if f.file == "words.xz" {
-			goodMD5 = f.md5sum
-			break
-		}
-	}
 	z, err := xz.NewReader(nil, 0)
 	if err != nil {
 		t.Fatal(err)
@@ -693,9 +695,10 @@ func TestReuseReaderPartialReads(t *testing.T) {
 			t.Fatalf("io.Copy: wanted error: %v, got: %v\n", nil, err)
 		}
 		md5sum := fmt.Sprintf("%x", hash.Sum(nil))
-		if goodMD5 != md5sum {
+		wantedMD5, _ := testFileData("words.xz")
+		if wantedMD5 != md5sum {
 			t.Fatalf(
-				"hash.Sum: wanted md5: %v, got: %v\n", goodMD5, md5sum)
+				"hash.Sum: wanted md5: %v, got: %v\n", wantedMD5, md5sum)
 		}
 	}
 }
