@@ -384,9 +384,39 @@ var otherFiles = []testFile{
 	},
 }
 
+func openTestFile(file string) (*os.File, error) {
+	f, err := os.Open(filepath.Join("testdata", "xz-utils", file))
+	if err == nil {
+		return f, nil
+	}
+	if err != nil && !os.IsNotExist(err) {
+		return nil, err
+	}
+	f, err = os.Open(filepath.Join("testdata", "other", file))
+	if err == nil {
+		return f, nil
+	}
+	return nil, err
+}
+
+func readTestFile(file string) ([]byte, error) {
+	b, err := ioutil.ReadFile(filepath.Join("testdata", "xz-utils", file))
+	if err == nil {
+		return b, nil
+	}
+	if err != nil && !os.IsNotExist(err) {
+		return nil, err
+	}
+	b, err = ioutil.ReadFile(filepath.Join("testdata", "other", file))
+	if err == nil {
+		return b, nil
+	}
+	return nil, err
+}
+
 // testFileList tests the decoding of a list of files against their
 // expected error and md5sum.
-func testFileList(t *testing.T, dir string, files []testFile, reuseReader bool) {
+func testFileList(t *testing.T, files []testFile, reuseReader bool) {
 	var r *xz.Reader
 	var err error
 	if reuseReader {
@@ -395,7 +425,7 @@ func testFileList(t *testing.T, dir string, files []testFile, reuseReader bool) 
 	for _, f := range files {
 		func() {
 			var fr *os.File
-			fr, err = os.Open(filepath.Join("testdata", dir, f.file))
+			fr, err = openTestFile(f.file)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -426,10 +456,10 @@ func testFileList(t *testing.T, dir string, files []testFile, reuseReader bool) 
 // testFileListByteReads tests the decoding of a list of files against
 // their expected error and md5sum. It uses a one byte input buffer
 // and one byte output buffer for each run of the decoder.
-func testFileListByteReads(t *testing.T, dir string, files []testFile) {
+func testFileListByteReads(t *testing.T, files []testFile) {
 	for _, f := range files {
 		func() {
-			fr, err := os.Open(filepath.Join("testdata", dir, f.file))
+			fr, err := openTestFile(f.file)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -464,24 +494,23 @@ func testFileListByteReads(t *testing.T, dir string, files []testFile) {
 }
 
 func TestBadFiles(t *testing.T) {
-	testFileList(t, "xz-utils", badFiles, false)
+	testFileList(t, badFiles, false)
 }
 
 func TestGoodFiles(t *testing.T) {
-	testFileList(t, "xz-utils", goodFiles, false)
+	testFileList(t, goodFiles, false)
 }
 
 func TestUnsupportedFiles(t *testing.T) {
-	testFileList(t, "xz-utils", unsupportedFiles, false)
+	testFileList(t, unsupportedFiles, false)
 }
 
 func TestOtherFiles(t *testing.T) {
-	testFileList(t, "other", otherFiles, false)
+	testFileList(t, otherFiles, false)
 }
 
 func TestMemlimit(t *testing.T) {
-	data, err := ioutil.ReadFile(
-		filepath.Join("testdata", "other", "words.xz"))
+	data, err := readTestFile("words.xz")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -499,8 +528,7 @@ func TestMemlimit(t *testing.T) {
 // test to ensure that decoder errors are not returned prematurely
 // the test file returns 6 decoded bytes before corruption occurs
 func TestPrematureError(t *testing.T) {
-	data, err := ioutil.ReadFile(
-		filepath.Join("testdata", "other", "good-2-lzma2-corrupt.xz"))
+	data, err := readTestFile("good-2-lzma2-corrupt.xz")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -525,8 +553,7 @@ func TestPrematureError(t *testing.T) {
 }
 
 func TestMultipleBadReads(t *testing.T) {
-	data, err := ioutil.ReadFile(
-		filepath.Join("testdata", "other", "good-2-lzma2-corrupt.xz"))
+	data, err := readTestFile("good-2-lzma2-corrupt.xz")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -559,19 +586,18 @@ func TestByteReads(t *testing.T) {
 	fileList := badFiles
 	fileList = append(fileList, goodFiles...)
 	fileList = append(fileList, unsupportedFiles...)
-	testFileListByteReads(t, "xz-utils", fileList)
-	fileList = []testFile{}
-	for _, f := range otherFiles {
+	fileList = append(fileList, otherFiles...)
+	fileListSmall := []testFile{}
+	for _, f := range fileList {
 		if f.file != "zeros-100mb.xz" {
-			fileList = append(fileList, f)
+			fileListSmall = append(fileListSmall, f)
 		}
 	}
-	testFileListByteReads(t, "other", fileList)
+	testFileListByteReads(t, fileListSmall)
 }
 
 func TestMultistream(t *testing.T) {
-	data, err := ioutil.ReadFile(
-		filepath.Join("testdata", "other", "words.xz"))
+	data, err := readTestFile("words.xz")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -618,11 +644,11 @@ func TestMultistream(t *testing.T) {
 }
 
 // TestReuseReader decodes the test files reusing the same Reader for
-// most files instead of allocating a new Reader for each file.
+// all files instead of allocating a new Reader for each file.
 func TestReuseReader(t *testing.T) {
 	fileList := badFiles
 	fileList = append(fileList, goodFiles...)
 	fileList = append(fileList, unsupportedFiles...)
-	testFileList(t, "xz-utils", fileList, true)
-	testFileList(t, "other", otherFiles, true)
+	fileList = append(fileList, otherFiles...)
+	testFileList(t, fileList, true)
 }
