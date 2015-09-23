@@ -652,3 +652,50 @@ func TestReuseReader(t *testing.T) {
 	fileList = append(fileList, otherFiles...)
 	testFileList(t, fileList, true)
 }
+
+// TestReuseReaderPartialReads repeatedly tests decoding a file with a
+// reused Reader that has been used immediately before to partially
+// decode a file. The amount of partial decoding before the full
+// decode is varied on each loop iteration.
+func TestReuseReaderPartialReads(t *testing.T) {
+	data, err := readTestFile("words.xz")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var goodMD5 string
+	for _, f := range otherFiles {
+		if f.file == "words.xz" {
+			goodMD5 = f.md5sum
+			break
+		}
+	}
+	z, err := xz.NewReader(nil, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i <= 80000; i += 10000 {
+		err = z.Reset(bytes.NewReader(data))
+		if err != nil {
+			t.Fatal(err)
+		}
+		b := make([]byte, i)
+		_, err = io.ReadFull(z, b)
+		if err != nil {
+			t.Fatalf("io.ReadFull: wanted error: %v, got: %v\n", nil, err)
+		}
+		err = z.Reset(bytes.NewReader(data))
+		if err != nil {
+			t.Fatal(err)
+		}
+		hash := md5.New()
+		_, err = io.Copy(hash, z)
+		if err != nil {
+			t.Fatalf("io.Copy: wanted error: %v, got: %v\n", nil, err)
+		}
+		md5sum := fmt.Sprintf("%x", hash.Sum(nil))
+		if goodMD5 != md5sum {
+			t.Fatalf(
+				"hash.Sum: wanted md5: %v, got: %v\n", goodMD5, md5sum)
+		}
+	}
+}
