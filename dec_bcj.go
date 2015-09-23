@@ -16,7 +16,7 @@ package xz
 
 type xzDecBCJ struct {
 	/* Type of the BCJ filter being used */
-	type_ xzFilterID
+	typ xzFilterID
 	/*
 	 * Return value of the next filter in the chain. We need to preserve
 	 * this information across calls, because we must not call the next
@@ -271,7 +271,7 @@ func bcjSPARCFilter(s *xzDecBCJ, buf []byte) int {
 func bcjApply(s *xzDecBCJ, buf []byte, pos *int) {
 	var filtered int
 	buf = buf[*pos:]
-	switch s.type_ {
+	switch s.typ {
 	case idBCJX86:
 		filtered = bcjX86Filter(s, buf)
 	case idBCJPowerPC:
@@ -451,7 +451,7 @@ func xzDecBCJReset(s *xzDecBCJ, id xzFilterID, offset int) xzRet {
 			return xzOptionsError
 		}
 	}
-	s.type_ = id
+	s.typ = id
 	s.ret = xzOK
 	s.pos = offset
 	s.x86PrevMask = 0
