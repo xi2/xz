@@ -10,6 +10,7 @@
 package xz // import "xi2.org/x/xz"
 
 import (
+	"bytes"
 	"errors"
 	"io"
 )
@@ -22,7 +23,6 @@ var (
 	ErrOptions          = errors.New("xz: compression options not supported")
 	ErrData             = errors.New("xz: data is corrupt")
 	ErrBuf              = errors.New("xz: data is truncated or corrupt")
-	ErrNilReader        = errors.New("xz: source reader is nil")
 )
 
 // DefaultDictMax is the default maximum dictionary size in bytes used
@@ -33,17 +33,23 @@ const DefaultDictMax = 1 << 26 // 64 MiB
 // inBufSize is the input buffer size used by the decoder.
 const inBufSize = 1 << 13 // 8 KiB
 
+var nullReader = bytes.NewReader(nil)
+
 // NewReader creates a new Reader reading from r. The decompressor
 // will use an LZMA2 dictionary size up to dictMax bytes in
 // size. Passing a value of zero sets dictMax to DefaultDictMax.  If
 // an individual XZ stream requires a dictionary size greater than
 // dictMax in order to decompress, Read will return ErrMemlimit.
 //
+// If NewReader is passed a value of nil for r then r is set to
+// bytes.NewReader(nil). This is useful if you just want to allocate
+// memory for a Reader which will later be initialized with Reset.
+//
 // Due to internal buffering, the Reader may read more data than
 // necessary from r.
 func NewReader(r io.Reader, dictMax uint32) (*Reader, error) {
 	if r == nil {
-		return nil, ErrNilReader
+		r = nullReader
 	}
 	if dictMax == 0 {
 		dictMax = DefaultDictMax
@@ -199,24 +205,45 @@ func (z *Reader) Read(p []byte) (n int, err error) {
 // behaviour can be useful when reading file formats that distinguish
 // individual XZ streams. In this mode, when the Reader reaches the
 // end of the stream, Read returns io.EOF. To start the next stream,
-// call z.Reset() followed by z.Multistream(false). If there is no
-// next stream, z.Reset() will return io.EOF.
+// call z.Reset(nil) followed by z.Multistream(false). If there is no
+// next stream, z.Reset(nil) will return io.EOF.
 func (z *Reader) Multistream(ok bool) {
 	z.multistream = ok
 }
 
-// Reset prepares the reader to read follow on streams when it is not
-// in multistream mode and it has finished reading a stream. It also
-// resets multistream mode to true (the default). If there are no
-// follow on streams, Reset returns io.EOF.
-func (z *Reader) Reset() error {
-	if !z.dEOF {
+// Reset, for non-nil values of r, discards the Reader z's state and
+// makes it equivalent to the result of its original state from
+// NewReader, but reading from r instead. This permits reusing a
+// Reader rather than allocating a new one.
+//
+// If you wish to continue using the same io.Reader you should instead
+// call z.Reset(nil). In this case multistream mode is set to true and
+// the decoder, if it had finished reading a stream, is readied to
+// read follow on streams. Internal buffering and other decoder state
+// is kept. If the decoder had finished reading a stream and the
+// io.Reader is now exhausted z.Reset(nil) will return io.EOF.
+func (z *Reader) Reset(r io.Reader) error {
+	switch {
+	case r == nil:
+		z.multistream = true
+		if !z.dEOF {
+			return nil
+		}
+		if z.rEOF {
+			return io.EOF
+		}
+		z.dEOF = false
+		return nil
+	default:
+		z.r = r
+		z.multistream = true
+		z.rEOF = false
+		z.dEOF = false
+		z.padding = -1
+		z.buf.in = nil
+		z.buf.inPos = 0
+		xzDecReset(z.dec)
+		z.err = nil
 		return nil
 	}
-	if z.rEOF {
-		return io.EOF
-	}
-	z.dEOF = false
-	z.multistream = true
-	return nil
 }

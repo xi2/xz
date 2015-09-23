@@ -66,7 +66,7 @@ func ExampleReader_Multistream() {
 	}
 	fmt.Println("Read first stream")
 	// reset the XZ reader so it is ready to read the second stream
-	err = r.Reset()
+	err = r.Reset(nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -79,7 +79,7 @@ func ExampleReader_Multistream() {
 	}
 	fmt.Println("Read second stream")
 	// reset the XZ reader so it is ready to read further streams
-	err = r.Reset()
+	err = r.Reset(nil)
 	// confirm that the second stream was the last one
 	if err == io.EOF {
 		fmt.Println("No more streams")

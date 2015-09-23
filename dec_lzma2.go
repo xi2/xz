@@ -1227,6 +1227,8 @@ func xzDecLZMA2Reset(s *xzDecLZMA2, props byte) xzRet {
 	}
 	s.lzma.len = 0
 	s.lzma2.sequence = seqControl
+	s.lzma2.compressed = 0
+	s.lzma2.uncompressed = 0
 	s.lzma2.needDictReset = true
 	s.temp.buf = nil
 	return xzOK

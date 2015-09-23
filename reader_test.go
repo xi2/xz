@@ -386,16 +386,27 @@ var otherFiles = []testFile{
 
 // testFileList tests the decoding of a list of files against their
 // expected error and md5sum.
-func testFileList(t *testing.T, dir string, files []testFile) {
+func testFileList(t *testing.T, dir string, files []testFile, reuseReader bool) {
+	var r *xz.Reader
+	var err error
+	if reuseReader {
+		r, err = xz.NewReader(nil, 0)
+	}
 	for _, f := range files {
 		func() {
-			fr, err := os.Open(filepath.Join("testdata", dir, f.file))
+			var fr *os.File
+			fr, err = os.Open(filepath.Join("testdata", dir, f.file))
 			if err != nil {
 				t.Fatal(err)
 			}
 			defer fr.Close()
 			hash := md5.New()
-			r, err := xz.NewReader(fr, 0)
+			switch reuseReader {
+			case true:
+				err = r.Reset(fr)
+			case false:
+				r, err = xz.NewReader(fr, 0)
+			}
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -453,19 +464,19 @@ func testFileListByteReads(t *testing.T, dir string, files []testFile) {
 }
 
 func TestBadFiles(t *testing.T) {
-	testFileList(t, "xz-utils", badFiles)
+	testFileList(t, "xz-utils", badFiles, false)
 }
 
 func TestGoodFiles(t *testing.T) {
-	testFileList(t, "xz-utils", goodFiles)
+	testFileList(t, "xz-utils", goodFiles, false)
 }
 
 func TestUnsupportedFiles(t *testing.T) {
-	testFileList(t, "xz-utils", unsupportedFiles)
+	testFileList(t, "xz-utils", unsupportedFiles, false)
 }
 
 func TestOtherFiles(t *testing.T) {
-	testFileList(t, "other", otherFiles)
+	testFileList(t, "other", otherFiles, false)
 }
 
 func TestMemlimit(t *testing.T) {
@@ -592,7 +603,7 @@ func TestMultistream(t *testing.T) {
 			t.Fatalf(
 				"hash.Sum: wanted md5: %v, got: %v\n", goodMD5, md5sum)
 		}
-		err = r.Reset()
+		err = r.Reset(nil)
 		var wantedErr error
 		switch {
 		case i != 9:
@@ -604,4 +615,14 @@ func TestMultistream(t *testing.T) {
 			t.Fatalf("r.Reset: wanted error: %v, got: %v\n", wantedErr, err)
 		}
 	}
+}
+
+// TestReuseReader decodes the test files reusing the same Reader for
+// most files instead of allocating a new Reader for each file.
+func TestReuseReader(t *testing.T) {
+	fileList := badFiles
+	fileList = append(fileList, goodFiles...)
+	fileList = append(fileList, unsupportedFiles...)
+	testFileList(t, "xz-utils", fileList, true)
+	testFileList(t, "other", otherFiles, true)
 }
