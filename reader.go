@@ -166,7 +166,7 @@ func (z *Reader) Read(p []byte) (n int, err error) {
 		case xzStreamEnd:
 			if z.padding >= 0 {
 				z.padding = -1
-				if !z.multistream || z.rEOF == true {
+				if !z.multistream || z.rEOF {
 					z.dEOF = true
 				}
 			} else {
