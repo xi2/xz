@@ -558,4 +558,50 @@ func TestByteReads(t *testing.T) {
 	testFileListByteReads(t, "other", fileList)
 }
 
-// Multistream is tested in example_test.go
+func TestMultistream(t *testing.T) {
+	data, err := ioutil.ReadFile(
+		filepath.Join("testdata", "other", "words.xz"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var goodMD5 string
+	for _, f := range otherFiles {
+		if f.file == "words.xz" {
+			goodMD5 = f.md5sum
+			break
+		}
+	}
+	var readers []io.Reader
+	for i := 0; i < 10; i++ {
+		readers = append(readers, bytes.NewReader(data))
+	}
+	mr := io.MultiReader(readers...)
+	r, err := xz.NewReader(mr, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 10; i++ {
+		r.Multistream(false)
+		hash := md5.New()
+		_, err = io.Copy(hash, r)
+		if err != nil {
+			t.Fatalf("io.Copy: wanted error: %v, got: %v\n", nil, err)
+		}
+		md5sum := fmt.Sprintf("%x", hash.Sum(nil))
+		if goodMD5 != md5sum {
+			t.Fatalf(
+				"hash.Sum: wanted md5: %v, got: %v\n", goodMD5, md5sum)
+		}
+		err = r.Reset()
+		var wantedErr error
+		switch {
+		case i != 9:
+			wantedErr = nil
+		case i == 9:
+			wantedErr = io.EOF
+		}
+		if wantedErr != err {
+			t.Fatalf("r.Reset: wanted error: %v, got: %v\n", wantedErr, err)
+		}
+	}
+}
