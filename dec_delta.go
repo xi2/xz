@@ -48,6 +48,7 @@ func xzDecDeltaReset(s *xzDecDelta, distance int) xzRet {
 	if distance < 1 || distance > 256 {
 		return xzOptionsError
 	}
+	s.delta = [256]byte{}
 	s.pos = 0
 	s.distance = distance
 	return xzOK
