@@ -105,10 +105,11 @@ type xzDec struct {
 	outStart int
 	/* CRC32 value in Index */
 	crc32 uint32
-	/*
-	 * Hash used in Block (CRC32/CRC64/SHA256) - it is created by
-	 * decStreamHeader.
-	 */
+	/* Hashes used in Blocks */
+	checkCRC32  hash.Hash
+	checkCRC64  hash.Hash
+	checkSHA256 hash.Hash
+	/* for checkTypes CRC32/CRC64/SHA256, check is one of the above 3 hashes */
 	check hash.Hash
 	/* Type of the integrity check calculated from uncompressed data */
 	checkType xzCheck
@@ -446,11 +447,23 @@ func decStreamHeader(s *xzDec) xzRet {
 	case xzCheckNone:
 		// xzCheckNone: no action needed
 	case xzCheckCRC32:
-		s.check = crc32.New(xzCRC32Table)
+		if s.checkCRC32 == nil {
+			s.checkCRC32 = crc32.New(xzCRC32Table)
+		}
+		s.check = s.checkCRC32
+		s.check.Reset()
 	case xzCheckCRC64:
-		s.check = crc64.New(xzCRC64Table)
+		if s.checkCRC64 == nil {
+			s.checkCRC64 = crc64.New(xzCRC64Table)
+		}
+		s.check = s.checkCRC64
+		s.check.Reset()
 	case xzCheckSHA256:
-		s.check = sha256.New()
+		if s.checkSHA256 == nil {
+			s.checkSHA256 = sha256.New()
+		}
+		s.check = s.checkSHA256
+		s.check.Reset()
 	default:
 		return xzUnsupportedCheck
 	}
@@ -879,9 +892,9 @@ func xzDecRun(s *xzDec, b *xzBuf) xzRet {
  */
 func xzDecInit(dictMax uint32) *xzDec {
 	s := new(xzDec)
-	s.lzma2 = xzDecLZMA2Create(dictMax)
 	s.block.hash.sha256 = sha256.New()
 	s.index.hash.sha256 = sha256.New()
+	s.lzma2 = xzDecLZMA2Create(dictMax)
 	xzDecReset(s)
 	return s
 }
