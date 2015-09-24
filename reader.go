@@ -10,7 +10,6 @@
 package xz // import "xi2.org/x/xz"
 
 import (
-	"bytes"
 	"errors"
 	"io"
 )
@@ -33,23 +32,23 @@ const DefaultDictMax = 1 << 26 // 64 MiB
 // inBufSize is the input buffer size used by the decoder.
 const inBufSize = 1 << 13 // 8 KiB
 
-var nullReader = bytes.NewReader(nil)
-
 // NewReader creates a new Reader reading from r. The decompressor
 // will use an LZMA2 dictionary size up to dictMax bytes in
 // size. Passing a value of zero sets dictMax to DefaultDictMax.  If
 // an individual XZ stream requires a dictionary size greater than
 // dictMax in order to decompress, Read will return ErrMemlimit.
 //
-// If NewReader is passed a value of nil for r then r is set to
-// bytes.NewReader(nil). This is useful if you just want to allocate
-// memory for a Reader which will later be initialized with Reset.
+// If NewReader is passed a value of nil for r then a Reader is
+// created such that all read attempts will return io.EOF. This is
+// useful if you just want to allocate memory for a Reader which will
+// later be initialized with Reset.
 //
 // Due to internal buffering, the Reader may read more data than
 // necessary from r.
 func NewReader(r io.Reader, dictMax uint32) (*Reader, error) {
+	var rEOF, dEOF bool
 	if r == nil {
-		r = nullReader
+		rEOF, dEOF = true, true
 	}
 	if dictMax == 0 {
 		dictMax = DefaultDictMax
@@ -57,6 +56,8 @@ func NewReader(r io.Reader, dictMax uint32) (*Reader, error) {
 	return &Reader{
 		r:           r,
 		multistream: true,
+		rEOF:        rEOF,
+		dEOF:        dEOF,
 		padding:     -1,
 		buf:         &xzBuf{},
 		dec:         xzDecInit(dictMax),
