@@ -623,7 +623,11 @@ func decBlockHeader(s *xzDec) xzRet {
 		switch id := filterList[i].id; id {
 		case idDelta:
 			// delta filter
-			delta := xzDecDeltaCreate(int(filterList[i].props) + 1)
+			delta := xzDecDeltaCreate()
+			ret = xzDecDeltaReset(delta, int(filterList[i].props)+1)
+			if ret != xzOK {
+				return ret
+			}
 			chain := s.chain
 			s.chain = func(b *xzBuf) xzRet {
 				return xzDecDeltaRun(delta, b, chain)

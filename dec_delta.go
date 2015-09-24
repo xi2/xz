@@ -33,10 +33,22 @@ func xzDecDeltaRun(s *xzDecDelta, b *xzBuf, chain func(*xzBuf) xzRet) xzRet {
 }
 
 /*
- * Allocate memory for a delta decoder
+ * Allocate memory for a delta decoder. xzDecDeltaReset must be used
+ * before calling xzDecDeltaRun.
  */
-func xzDecDeltaCreate(distance int) *xzDecDelta {
-	return &xzDecDelta{
-		distance: distance,
+func xzDecDeltaCreate() *xzDecDelta {
+	return new(xzDecDelta)
+}
+
+/*
+ * Returns xzOK if the given distance is valid. Otherwise
+ * xzOptionsError is returned.
+ */
+func xzDecDeltaReset(s *xzDecDelta, distance int) xzRet {
+	if distance < 1 || distance > 256 {
+		return xzOptionsError
 	}
+	s.pos = 0
+	s.distance = distance
+	return xzOK
 }
