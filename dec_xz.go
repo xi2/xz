@@ -12,11 +12,6 @@
 
 package xz
 
-import (
-	"hash/crc32"
-	"hash/crc64"
-)
-
 /* from linux/include/linux/xz.h **************************************/
 
 /**
@@ -76,18 +71,6 @@ type xzBuf struct {
 	inPos  int
 	out    []byte
 	outPos int
-}
-
-var xzCRC32Table = crc32.MakeTable(crc32.IEEE)
-var xzCRC64Table = crc64.MakeTable(crc64.ECMA)
-
-/*
- * Update CRC32 value using the polynomial from IEEE-802.3. To start a new
- * calculation, the second argument must be zero. To continue the calculation,
- * the previously returned value is passed as the second argument.
- */
-func xzCRC32(buf []byte, crc uint32) uint32 {
-	return crc32.Update(crc, xzCRC32Table, buf)
 }
 
 /* All XZ filter IDs */

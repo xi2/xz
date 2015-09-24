@@ -103,8 +103,8 @@ type xzDec struct {
 	/* Saved inPos and outPos */
 	inStart  int
 	outStart int
-	/* CRC32 value in Index */
-	crc32 uint32
+	/* CRC32 checksum hash used in Index */
+	crc32 hash.Hash
 	/* Hashes used in Blocks */
 	checkCRC32  hash.Hash
 	checkCRC64  hash.Hash
@@ -298,11 +298,11 @@ func decBlock(s *xzDec, b *xzBuf) xzRet {
 	return ret
 }
 
-/* Update the Index size and the CRC32 value. */
+/* Update the Index size and the CRC32 hash. */
 func indexUpdate(s *xzDec, b *xzBuf) {
 	inUsed := b.inPos - s.inStart
 	s.index.size += vliType(inUsed)
-	s.crc32 = xzCRC32(b.in[s.inStart:s.inStart+inUsed], s.crc32)
+	_, _ = s.crc32.Write(b.in[s.inStart : s.inStart+inUsed])
 }
 
 /*
@@ -353,24 +353,27 @@ func decIndex(s *xzDec, b *xzBuf) xzRet {
 }
 
 /*
- * Validate that the next four bytes match the value of s.crc32. s.pos
- * must be zero when starting to validate the first byte.
+ * Validate that the next 4 bytes match s.crc32.Sum(nil). s.pos must
+ * be zero when starting to validate the first byte.
  */
 func crcValidate(s *xzDec, b *xzBuf) xzRet {
+	sum := s.crc32.Sum(nil)
+	// CRC32 - reverse slice
+	sum[0], sum[1], sum[2], sum[3] = sum[3], sum[2], sum[1], sum[0]
 	for {
 		if b.inPos == len(b.in) {
 			return xzOK
 		}
-		if byte((s.crc32>>uint(s.pos))&0xFF) != b.in[b.inPos] {
+		if sum[s.pos] != b.in[b.inPos] {
 			return xzDataError
 		}
 		b.inPos++
-		s.pos += 8
-		if !(s.pos < 32) {
+		s.pos++
+		if !(s.pos < 4) {
 			break
 		}
 	}
-	s.crc32 = 0
+	s.crc32.Reset()
 	s.pos = 0
 	return xzStreamEnd
 }
@@ -421,12 +424,15 @@ func checkSkip(s *xzDec, b *xzBuf) bool {
 	return true
 }
 
+/* polynomial table used in decStreamHeader below */
+var xzCRC64Table = crc64.MakeTable(crc64.ECMA)
+
 /* Decode the Stream Header field (the first 12 bytes of the .xz Stream). */
 func decStreamHeader(s *xzDec) xzRet {
 	if string(s.temp.buf[:len(headerMagic)]) != headerMagic {
 		return xzFormatError
 	}
-	if xzCRC32(s.temp.buf[len(headerMagic):len(headerMagic)+2], 0) !=
+	if crc32.ChecksumIEEE(s.temp.buf[len(headerMagic):len(headerMagic)+2]) !=
 		getLE32(s.temp.buf[len(headerMagic)+2:]) {
 		return xzDataError
 	}
@@ -448,7 +454,7 @@ func decStreamHeader(s *xzDec) xzRet {
 		// xzCheckNone: no action needed
 	case xzCheckCRC32:
 		if s.checkCRC32 == nil {
-			s.checkCRC32 = crc32.New(xzCRC32Table)
+			s.checkCRC32 = crc32.NewIEEE()
 		}
 		s.check = s.checkCRC32
 		s.check.Reset()
@@ -475,7 +481,7 @@ func decStreamFooter(s *xzDec) xzRet {
 	if string(s.temp.buf[10:10+len(footerMagic)]) != footerMagic {
 		return xzDataError
 	}
-	if xzCRC32(s.temp.buf[4:10], 0) != getLE32(s.temp.buf) {
+	if crc32.ChecksumIEEE(s.temp.buf[4:10]) != getLE32(s.temp.buf) {
 		return xzDataError
 	}
 	/*
@@ -505,7 +511,7 @@ func decBlockHeader(s *xzDec) xzRet {
 	 */
 	crc := getLE32(s.temp.buf[len(s.temp.buf)-4:])
 	s.temp.buf = s.temp.buf[:len(s.temp.buf)-4]
-	if xzCRC32(s.temp.buf, 0) != crc {
+	if crc32.ChecksumIEEE(s.temp.buf) != crc {
 		return xzDataError
 	}
 	s.temp.pos = 2
@@ -892,6 +898,7 @@ func xzDecRun(s *xzDec, b *xzBuf) xzRet {
  */
 func xzDecInit(dictMax uint32) *xzDec {
 	s := new(xzDec)
+	s.crc32 = crc32.NewIEEE()
 	s.block.hash.sha256 = sha256.New()
 	s.index.hash.sha256 = sha256.New()
 	s.lzma2 = xzDecLZMA2Create(dictMax)
@@ -910,7 +917,7 @@ func xzDecReset(s *xzDec) {
 	s.sequence = seqStreamHeader
 	s.allowBufError = false
 	s.pos = 0
-	s.crc32 = 0
+	s.crc32.Reset()
 	s.check = nil
 	s.block.compressed = 0
 	s.block.uncompressed = 0
