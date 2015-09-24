@@ -179,11 +179,11 @@ type xzDec struct {
 	// lzma2 holds the state of the last filter (which must be LZMA2)
 	lzma2 *xzDecLZMA2
 	// pointers to allocated BCJ/Delta filters
-	bcjFilters   []*xzDecBCJ
-	deltaFilters []*xzDecDelta
+	bcjs   []*xzDecBCJ
+	deltas []*xzDecDelta
 	// number of currently in use BCJ/Delta filters from the above
-	bcjFiltersUsed   int
-	deltaFiltersUsed int
+	bcjsUsed   int
+	deltasUsed int
 }
 
 /* Sizes of the Check field with different Check IDs */
@@ -630,13 +630,13 @@ func decBlockHeader(s *xzDec) xzRet {
 		case idDelta:
 			// delta filter
 			var delta *xzDecDelta
-			if s.deltaFiltersUsed < len(s.deltaFilters) {
-				delta = s.deltaFilters[s.deltaFiltersUsed]
+			if s.deltasUsed < len(s.deltas) {
+				delta = s.deltas[s.deltasUsed]
 			} else {
 				delta = xzDecDeltaCreate()
-				s.deltaFilters = append(s.deltaFilters, delta)
+				s.deltas = append(s.deltas, delta)
 			}
-			s.deltaFiltersUsed++
+			s.deltasUsed++
 			ret = xzDecDeltaReset(delta, int(filterList[i].props)+1)
 			if ret != xzOK {
 				return ret
@@ -649,13 +649,13 @@ func decBlockHeader(s *xzDec) xzRet {
 			idBCJARM, idBCJARMThumb, idBCJSPARC:
 			// bcj filter
 			var bcj *xzDecBCJ
-			if s.bcjFiltersUsed < len(s.bcjFilters) {
-				bcj = s.bcjFilters[s.bcjFiltersUsed]
+			if s.bcjsUsed < len(s.bcjs) {
+				bcj = s.bcjs[s.bcjsUsed]
 			} else {
 				bcj = xzDecBCJCreate()
-				s.bcjFilters = append(s.bcjFilters, bcj)
+				s.bcjs = append(s.bcjs, bcj)
 			}
-			s.bcjFiltersUsed++
+			s.bcjsUsed++
 			ret = xzDecBCJReset(bcj, id, int(filterList[i].props))
 			if ret != xzOK {
 				return ret
@@ -914,6 +914,6 @@ func xzDecReset(s *xzDec) {
 	s.temp.pos = 0
 	s.temp.buf = s.temp.bufArray[:streamHeaderSize]
 	s.chain = nil
-	s.bcjFiltersUsed = 0
-	s.deltaFiltersUsed = 0
+	s.bcjsUsed = 0
+	s.deltasUsed = 0
 }
