@@ -91,6 +91,21 @@ const (
 // calculated from the uncompressed data.
 type CheckID byte
 
+func (id CheckID) String() string {
+	switch id {
+	case CheckNone:
+		return "None"
+	case CheckCRC32:
+		return "CRC32"
+	case CheckCRC64:
+		return "CRC64"
+	case CheckSHA256:
+		return "SHA256"
+	default:
+		return "Unknown"
+	}
+}
+
 var (
 	CheckNone   CheckID = 0x00
 	CheckCRC32  CheckID = 0x01
