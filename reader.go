@@ -46,22 +46,24 @@ const inBufSize = 1 << 13 // 8 KiB
 // Due to internal buffering, the Reader may read more data than
 // necessary from r.
 func NewReader(r io.Reader, dictMax uint32) (*Reader, error) {
-	var rEOF, dEOF bool
-	if r == nil {
-		rEOF, dEOF = true, true
-	}
 	if dictMax == 0 {
 		dictMax = DefaultDictMax
 	}
-	return &Reader{
+	z := &Reader{
 		r:           r,
 		multistream: true,
-		rEOF:        rEOF,
-		dEOF:        dEOF,
 		padding:     -1,
 		buf:         &xzBuf{},
-		dec:         xzDecInit(dictMax),
-	}, nil
+	}
+	if r == nil {
+		z.rEOF, z.dEOF = true, true
+	}
+	z.dec = xzDecInit(dictMax, &z.Header)
+	var err error
+	if r != nil {
+		_, err = z.Read(nil) // read stream header
+	}
+	return z, err
 }
 
 // A Reader is an io.Reader that can be used to retrieve uncompressed
@@ -71,6 +73,7 @@ func NewReader(r io.Reader, dictMax uint32) (*Reader, error) {
 // files. Reads from the Reader return the concatenation of the
 // uncompressed data of each.
 type Reader struct {
+	Header
 	r           io.Reader       // the wrapped io.Reader
 	multistream bool            // true if reader is in multistream mode
 	rEOF        bool            // true after io.EOF received on r
@@ -140,8 +143,9 @@ func (z *Reader) Read(p []byte) (n int, err error) {
 			err = io.EOF
 			break
 		}
-		// if p full, return with err == nil
-		if n == len(p) {
+		// if p full, return with err == nil, unless we have not yet
+		// read the stream header with Read(nil)
+		if n == len(p) && z.CheckType != checkUnset {
 			break
 		}
 		// if needed, read more data from z.r
@@ -234,7 +238,8 @@ func (z *Reader) Reset(r io.Reader) error {
 			return io.EOF
 		}
 		z.dEOF = false
-		return nil
+		_, err := z.Read(nil) // read stream header
+		return err
 	default:
 		z.r = r
 		z.multistream = true
@@ -245,6 +250,7 @@ func (z *Reader) Reset(r io.Reader) error {
 		z.buf.inPos = 0
 		xzDecReset(z.dec)
 		z.err = nil
-		return nil
+		_, err := z.Read(nil) // read stream header
+		return err
 	}
 }

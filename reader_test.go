@@ -452,10 +452,9 @@ func testFileList(t *testing.T, files []testFile, reuseReader bool) {
 			case false:
 				r, err = xz.NewReader(fr, 0)
 			}
-			if err != nil {
-				t.Fatal(err)
+			if err == nil {
+				_, err = io.Copy(hash, r)
 			}
-			_, err = io.Copy(hash, r)
 			if err != f.err {
 				t.Fatalf("%s: wanted error: %v, got: %v\n", f.file, f.err, err)
 			}
@@ -482,19 +481,18 @@ func testFileListByteReads(t *testing.T, files []testFile) {
 			hash := md5.New()
 			obr := iotest.OneByteReader(fr)
 			r, err := xz.NewReader(obr, 0)
-			if err != nil {
-				t.Fatal(err)
-			}
-			b := make([]byte, 1)
-			var n int
-			for err == nil {
-				n, err = r.Read(b)
-				if n == 1 {
-					_, _ = hash.Write(b)
+			if err == nil {
+				b := make([]byte, 1)
+				var n int
+				for err == nil {
+					n, err = r.Read(b)
+					if n == 1 {
+						_, _ = hash.Write(b)
+					}
 				}
-			}
-			if err == io.EOF {
-				err = nil
+				if err == io.EOF {
+					err = nil
+				}
 			}
 			if err != f.err {
 				t.Fatalf("%s: wanted error: %v, got: %v\n", f.file, f.err, err)
@@ -530,11 +528,10 @@ func TestMemlimit(t *testing.T) {
 		t.Fatal(err)
 	}
 	r, err := xz.NewReader(bytes.NewReader(data), 1<<25)
-	if err != nil {
-		t.Fatal(err)
+	if err == nil {
+		b := new(bytes.Buffer)
+		_, err = io.Copy(b, r)
 	}
-	b := new(bytes.Buffer)
-	_, err = io.Copy(b, r)
 	if err != xz.ErrMemlimit {
 		t.Fatalf("wanted error: %v, got: %v\n", xz.ErrMemlimit, err)
 	}

@@ -44,18 +44,6 @@ const (
 	vliBytesMax = 8 * 8 / 7 // (Sizeof(vliType) * 8 / 7)
 )
 
-/* Integrity Check types */
-type xzCheck int
-
-const (
-	xzCheckNone   xzCheck = 0
-	xzCheckCRC32  xzCheck = 1
-	xzCheckCRC64  xzCheck = 4
-	xzCheckSHA256 xzCheck = 10
-	/* Maximum possible Check ID */
-	xzCheckMax xzCheck = 15
-)
-
 /* from linux/lib/xz/xz_dec_stream.c **********************************/
 
 /* Hash used to validate the Index field */
@@ -111,8 +99,8 @@ type xzDec struct {
 	checkSHA256 hash.Hash
 	/* for checkTypes CRC32/CRC64/SHA256, check is one of the above 3 hashes */
 	check hash.Hash
-	/* Type of the integrity check calculated from uncompressed data */
-	checkType xzCheck
+	/* Embedded stream header struct containing CheckType */
+	*Header
 	/*
 	 * True if the next call to xzDecRun is allowed to return
 	 * xzBufError.
@@ -272,8 +260,8 @@ func decBlock(s *xzDec, b *xzBuf) xzRet {
 		s.block.uncompressed > s.blockHeader.uncompressed {
 		return xzDataError
 	}
-	switch s.checkType {
-	case xzCheckCRC32, xzCheckCRC64, xzCheckSHA256:
+	switch s.CheckType {
+	case CheckCRC32, CheckCRC64, CheckSHA256:
 		_, _ = s.check.Write(b.out[s.outStart:b.outPos])
 	}
 	if ret == xzStreamEnd {
@@ -287,7 +275,7 @@ func decBlock(s *xzDec, b *xzBuf) xzRet {
 		}
 		s.block.hash.unpadded +=
 			vliType(s.blockHeader.size) + s.block.compressed
-		s.block.hash.unpadded += vliType(checkSizes[s.checkType])
+		s.block.hash.unpadded += vliType(checkSizes[s.CheckType])
 		s.block.hash.uncompressed += s.block.uncompressed
 		var buf [2 * 8]byte // 2*Sizeof(vliType)
 		putLE64(uint64(s.block.hash.unpadded), buf[:])
@@ -384,7 +372,7 @@ func crcValidate(s *xzDec, b *xzBuf) xzRet {
  */
 func checkValidate(s *xzDec, b *xzBuf) xzRet {
 	sum := s.check.Sum(nil)
-	if s.checkType == xzCheckCRC32 || s.checkType == xzCheckCRC64 {
+	if s.CheckType == CheckCRC32 || s.CheckType == CheckCRC64 {
 		// CRC32/64 - reverse slice
 		for i, j := 0, len(sum)-1; i < j; i, j = i+1, j-1 {
 			sum[i], sum[j] = sum[j], sum[i]
@@ -413,7 +401,7 @@ func checkValidate(s *xzDec, b *xzBuf) xzRet {
  * Returns true once the whole Check field has been skipped over.
  */
 func checkSkip(s *xzDec, b *xzBuf) bool {
-	for s.pos < int(checkSizes[s.checkType]) {
+	for s.pos < int(checkSizes[s.CheckType]) {
 		if b.inPos == len(b.in) {
 			return false
 		}
@@ -445,26 +433,26 @@ func decStreamHeader(s *xzDec) xzRet {
 	 * However, we will accept other check types too, but then the check
 	 * won't be verified and a warning (xzUnsupportedCheck) will be given.
 	 */
-	s.checkType = xzCheck(s.temp.buf[len(headerMagic)+1])
-	if s.checkType > xzCheckMax {
+	s.CheckType = CheckID(s.temp.buf[len(headerMagic)+1])
+	if s.CheckType > checkMax {
 		return xzOptionsError
 	}
-	switch s.checkType {
-	case xzCheckNone:
-		// xzCheckNone: no action needed
-	case xzCheckCRC32:
+	switch s.CheckType {
+	case CheckNone:
+		// CheckNone: no action needed
+	case CheckCRC32:
 		if s.checkCRC32 == nil {
 			s.checkCRC32 = crc32.NewIEEE()
 		}
 		s.check = s.checkCRC32
 		s.check.Reset()
-	case xzCheckCRC64:
+	case CheckCRC64:
 		if s.checkCRC64 == nil {
 			s.checkCRC64 = crc64.New(xzCRC64Table)
 		}
 		s.check = s.checkCRC64
 		s.check.Reset()
-	case xzCheckSHA256:
+	case CheckSHA256:
 		if s.checkSHA256 == nil {
 			s.checkSHA256 = sha256.New()
 		}
@@ -492,7 +480,7 @@ func decStreamFooter(s *xzDec) xzRet {
 	if s.index.size>>2 != vliType(getLE32(s.temp.buf[4:])) {
 		return xzDataError
 	}
-	if s.temp.buf[8] != 0 || xzCheck(s.temp.buf[9]) != s.checkType {
+	if s.temp.buf[8] != 0 || CheckID(s.temp.buf[9]) != s.CheckType {
 		return xzDataError
 	}
 	/*
@@ -790,8 +778,8 @@ func decMain(s *xzDec, b *xzBuf) xzRet {
 			s.sequence = seqBlockCheck
 			fallthrough
 		case seqBlockCheck:
-			switch s.checkType {
-			case xzCheckCRC32, xzCheckCRC64, xzCheckSHA256:
+			switch s.CheckType {
+			case CheckCRC32, CheckCRC64, CheckSHA256:
 				ret = checkValidate(s, b)
 				if ret != xzStreamEnd {
 					return ret
@@ -896,9 +884,10 @@ func xzDecRun(s *xzDec, b *xzBuf) xzRet {
  * xzDecInit returns a pointer to an xzDec, which is ready to be used with
  * xzDecRun.
  */
-func xzDecInit(dictMax uint32) *xzDec {
+func xzDecInit(dictMax uint32, header *Header) *xzDec {
 	s := new(xzDec)
 	s.crc32 = crc32.NewIEEE()
+	s.Header = header
 	s.block.hash.sha256 = sha256.New()
 	s.index.hash.sha256 = sha256.New()
 	s.lzma2 = xzDecLZMA2Create(dictMax)
@@ -919,6 +908,7 @@ func xzDecReset(s *xzDec) {
 	s.pos = 0
 	s.crc32.Reset()
 	s.check = nil
+	s.CheckType = checkUnset
 	s.block.compressed = 0
 	s.block.uncompressed = 0
 	s.block.count = 0

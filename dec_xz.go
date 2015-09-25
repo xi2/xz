@@ -86,3 +86,22 @@ const (
 	idBCJSPARC    xzFilterID = 0x09
 	idLZMA2       xzFilterID = 0x21
 )
+
+// CheckID is the type of the data integrity check in an XZ stream
+// calculated from the uncompressed data.
+type CheckID byte
+
+var (
+	CheckNone   CheckID = 0x00
+	CheckCRC32  CheckID = 0x01
+	CheckCRC64  CheckID = 0x04
+	CheckSHA256 CheckID = 0x0A
+	checkMax    CheckID = 0x0F
+	checkUnset  CheckID = 0xFF
+)
+
+// An XZ stream contains a header giving metadata about the compressed
+// stream. That header is exposed as fields of the Reader struct.
+type Header struct {
+	CheckType CheckID // type of the stream's data integrity check
+}
