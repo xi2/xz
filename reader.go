@@ -32,6 +32,25 @@ const DefaultDictMax = 1 << 26 // 64 MiB
 // inBufSize is the input buffer size used by the decoder.
 const inBufSize = 1 << 13 // 8 KiB
 
+// A Reader is an io.Reader that can be used to retrieve uncompressed
+// data from an XZ file.
+//
+// In general, an XZ file can be a concatenation of other XZ
+// files. Reads from the Reader return the concatenation of the
+// uncompressed data of each.
+type Reader struct {
+	Header
+	r           io.Reader       // the wrapped io.Reader
+	multistream bool            // true if reader is in multistream mode
+	rEOF        bool            // true after io.EOF received on r
+	dEOF        bool            // true after decoder has completed
+	padding     int             // bytes of stream padding read (or -1)
+	in          [inBufSize]byte // backing array for buf.in
+	buf         *xzBuf          // decoder input/output buffers
+	dec         *xzDec          // decoder state
+	err         error           // the result of the last decoder call
+}
+
 // NewReader creates a new Reader reading from r. The decompressor
 // will use an LZMA2 dictionary size up to dictMax bytes in
 // size. Passing a value of zero sets dictMax to DefaultDictMax.  If
@@ -64,25 +83,6 @@ func NewReader(r io.Reader, dictMax uint32) (*Reader, error) {
 		_, err = z.Read(nil) // read stream header
 	}
 	return z, err
-}
-
-// A Reader is an io.Reader that can be used to retrieve uncompressed
-// data from an XZ file.
-//
-// In general, an XZ file can be a concatenation of other XZ
-// files. Reads from the Reader return the concatenation of the
-// uncompressed data of each.
-type Reader struct {
-	Header
-	r           io.Reader       // the wrapped io.Reader
-	multistream bool            // true if reader is in multistream mode
-	rEOF        bool            // true after io.EOF received on r
-	dEOF        bool            // true after decoder has completed
-	padding     int             // bytes of stream padding read (or -1)
-	in          [inBufSize]byte // backing array for buf.in
-	buf         *xzBuf          // decoder input/output buffers
-	dec         *xzDec          // decoder state
-	err         error           // the result of the last decoder call
 }
 
 // decode is a wrapper around xzDecRun that additionally handles
