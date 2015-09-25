@@ -1,5 +1,5 @@
 /*
- * Package xz utility functions
+ * XZ decompressor utility functions
  *
  * Author: Michael Cross <https://xi2.org/x/xz>
  *
