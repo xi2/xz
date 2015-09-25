@@ -221,12 +221,12 @@ func (z *Reader) Multistream(ok bool) {
 // from NewReader, but reading from r instead. This permits reusing a
 // Reader rather than allocating a new one.
 //
-// If you wish to continue using the same io.Reader you should instead
-// call z.Reset(nil). In this case multistream mode is set to true and
-// the decoder, if it has finished reading a stream, is readied to
-// read follow on streams. Internal buffering and other decoder state
-// is kept. If the decoder has finished reading a stream and the
-// io.Reader is now exhausted z.Reset(nil) will return io.EOF.
+// If you wish to leave r unchanged use z.Reset(nil). This keeps r
+// unchanged and ensures internal buffering is preserved. If the
+// Reader was at the end of a stream it is then ready to read any
+// follow on streams. If there are no follow on streams z.Reset(nil)
+// returns io.EOF. If the Reader was not at the end of a stream then
+// z.Reset(nil) does nothing.
 func (z *Reader) Reset(r io.Reader) error {
 	switch {
 	case r == nil:
