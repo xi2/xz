@@ -266,8 +266,8 @@ type dictionary struct {
 
 /* Range decoder */
 type rcDec struct {
-	range_ uint32
-	code   uint32
+	rnge uint32
+	code uint32
 	/*
 	 * Number of initializing bytes remaining to be read
 	 * by rcReadInit.
@@ -573,7 +573,7 @@ func dictFlush(dict *dictionary, b *xzBuf) int {
 
 /* Reset the range decoder. */
 func rcReset(rc *rcDec) {
-	rc.range_ = ^uint32(0)
+	rc.rnge = ^uint32(0)
 	rc.code = 0
 	rc.initBytesLeft = rcInitBytes
 }
@@ -609,8 +609,8 @@ func rcIsFinished(rc *rcDec) bool {
 
 /* Read the next input byte if needed. */
 func rcNormalize(rc *rcDec) {
-	if rc.range_ < rcTopValue {
-		rc.range_ <<= rcShiftBits
+	if rc.rnge < rcTopValue {
+		rc.rnge <<= rcShiftBits
 		rc.code = rc.code<<rcShiftBits + uint32(rc.in[rc.inPos])
 		rc.inPos++
 	}
@@ -621,13 +621,13 @@ func rcBit(rc *rcDec, prob *uint16) bool {
 	var bound uint32
 	var bit bool
 	rcNormalize(rc)
-	bound = (rc.range_ >> rcBitModelTotalBits) * uint32(*prob)
+	bound = (rc.rnge >> rcBitModelTotalBits) * uint32(*prob)
 	if rc.code < bound {
-		rc.range_ = bound
+		rc.rnge = bound
 		*prob += (rcBitModelTotal - *prob) >> rcMoveBits
 		bit = false
 	} else {
-		rc.range_ -= bound
+		rc.rnge -= bound
 		rc.code -= bound
 		*prob -= *prob >> rcMoveBits
 		bit = true
@@ -674,10 +674,10 @@ func rcDirect(rc *rcDec, dest *uint32, limit uint32) {
 	var mask uint32
 	for {
 		rcNormalize(rc)
-		rc.range_ >>= 1
-		rc.code -= rc.range_
+		rc.rnge >>= 1
+		rc.code -= rc.rnge
 		mask = 0 - rc.code>>31
-		rc.code += rc.range_ & mask
+		rc.code += rc.rnge & mask
 		*dest = *dest<<1 + mask + 1
 		limit--
 		if !(limit > 0) {
