@@ -609,12 +609,20 @@ func TestByteReads(t *testing.T) {
 }
 
 func TestMultistream(t *testing.T) {
-	data, err := readTestFile("words.xz")
-	if err != nil {
-		t.Fatal(err)
+	files := []string{
+		"good-1-x86-lzma2-offset-2048.xz",
+		"random-1mb.xz",
+		"words.xz",
+		"good-1-x86-lzma2-offset-2048.xz",
+		"random-1mb.xz",
+		"words.xz",
 	}
 	var readers []io.Reader
-	for i := 0; i < 10; i++ {
+	for _, f := range files {
+		data, err := readTestFile(f)
+		if err != nil {
+			t.Fatal(err)
+		}
 		readers = append(readers, bytes.NewReader(data))
 	}
 	mr := io.MultiReader(readers...)
@@ -622,29 +630,30 @@ func TestMultistream(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for i := 0; i < 10; i++ {
+	for i, f := range files {
 		r.Multistream(false)
 		hash := md5.New()
 		_, err = io.Copy(hash, r)
 		if err != nil {
-			t.Fatalf("io.Copy: wanted error: %v, got: %v\n", nil, err)
+			t.Fatalf("%s: wanted copy error: %v, got: %v\n", f, nil, err)
 		}
 		md5sum := fmt.Sprintf("%x", hash.Sum(nil))
-		wantedMD5, _ := testFileData("words.xz")
+		wantedMD5, _ := testFileData(f)
 		if wantedMD5 != md5sum {
 			t.Fatalf(
-				"hash.Sum: wanted md5: %v, got: %v\n", wantedMD5, md5sum)
+				"%s: wanted md5: %v, got: %v\n", f, wantedMD5, md5sum)
 		}
 		err = r.Reset(nil)
 		var wantedErr error
 		switch {
-		case i != 9:
+		case i < len(files)-1:
 			wantedErr = nil
-		case i == 9:
+		case i == len(files)-1:
 			wantedErr = io.EOF
 		}
 		if wantedErr != err {
-			t.Fatalf("r.Reset: wanted error: %v, got: %v\n", wantedErr, err)
+			t.Fatalf("%s: wanted reset error: %v, got: %v\n",
+				f, wantedErr, err)
 		}
 	}
 }
