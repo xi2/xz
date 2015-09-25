@@ -89,7 +89,7 @@ const (
 
 // CheckID is the type of the data integrity check in an XZ stream
 // calculated from the uncompressed data.
-type CheckID byte
+type CheckID int
 
 func (id CheckID) String() string {
 	switch id {
@@ -112,7 +112,7 @@ var (
 	CheckCRC64  CheckID = 0x04
 	CheckSHA256 CheckID = 0x0A
 	checkMax    CheckID = 0x0F
-	checkUnset  CheckID = 0xFF
+	checkUnset  CheckID = -1
 )
 
 // An XZ stream contains a header giving metadata about the compressed
