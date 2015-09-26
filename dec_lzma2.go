@@ -442,11 +442,11 @@ func dictReset(dict *dictionary, b *xzBuf) {
 }
 
 /* Set dictionary write limit */
-func dictLimit(dict *dictionary, outMax uint32) {
-	if dict.end-dict.pos <= outMax {
+func dictLimit(dict *dictionary, outMax int) {
+	if dict.end-dict.pos <= uint32(outMax) {
 		dict.limit = dict.end
 	} else {
-		dict.limit = dict.pos + outMax
+		dict.limit = dict.pos + uint32(outMax)
 	}
 }
 
@@ -1163,7 +1163,7 @@ func xzDecLZMA2Run(s *xzDecLZMA2, b *xzBuf) xzRet {
 			if outMax > s.lzma2.uncompressed {
 				outMax = s.lzma2.uncompressed
 			}
-			dictLimit(&s.dict, uint32(outMax))
+			dictLimit(&s.dict, outMax)
 			if !lzma2LZMA(s, b) {
 				return xzDataError
 			}
