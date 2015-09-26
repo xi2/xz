@@ -443,21 +443,24 @@ func decStreamHeader(s *xzDec) xzRet {
 	case CheckCRC32:
 		if s.checkCRC32 == nil {
 			s.checkCRC32 = crc32.NewIEEE()
+		} else {
+			s.checkCRC32.Reset()
 		}
 		s.check = s.checkCRC32
-		s.check.Reset()
 	case CheckCRC64:
 		if s.checkCRC64 == nil {
 			s.checkCRC64 = crc64.New(xzCRC64Table)
+		} else {
+			s.checkCRC64.Reset()
 		}
 		s.check = s.checkCRC64
-		s.check.Reset()
 	case CheckSHA256:
 		if s.checkSHA256 == nil {
 			s.checkSHA256 = sha256.New()
+		} else {
+			s.checkSHA256.Reset()
 		}
 		s.check = s.checkSHA256
-		s.check.Reset()
 	default:
 		return xzUnsupportedCheck
 	}
