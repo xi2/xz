@@ -106,7 +106,7 @@ func (id CheckID) String() string {
 	}
 }
 
-var (
+const (
 	CheckNone   CheckID = 0x00
 	CheckCRC32  CheckID = 0x01
 	CheckCRC64  CheckID = 0x04
