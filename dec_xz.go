@@ -115,8 +115,10 @@ const (
 	checkUnset  CheckID = -1
 )
 
-// An XZ stream contains a header giving metadata about the compressed
-// stream. That header is exposed as fields of the Reader struct.
+// An XZ stream contains a stream header which holds information about
+// the stream. That information is exposed as fields of the
+// Reader. Currently it contains only the stream's data integrity
+// check type.
 type Header struct {
 	CheckType CheckID // type of the stream's data integrity check
 }
