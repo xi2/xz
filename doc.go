@@ -14,6 +14,12 @@
 // types, supports multiple streams, and performs index verification
 // using SHA-256 as recommended by the specification.
 //
+// Speed
+//
+// On the author's Intel Ivybridge i5, decompression speed is about
+// half that of the standard XZ Utils (tested with a recent linux
+// kernel tarball).
+//
 // Thanks
 //
 // Thanks are due to Lasse Collin and Igor Pavlov, the authors of XZ
