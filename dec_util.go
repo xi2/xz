@@ -1,7 +1,7 @@
 /*
  * XZ decompressor utility functions
  *
- * Author: Michael Cross <https://xi2.org/x/xz>
+ * Author: Michael Cross <https://github.com/xi2>
  *
  * This file has been put into the public domain.
  * You can do whatever you want with this file.

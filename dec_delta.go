@@ -3,7 +3,7 @@
  *
  * Author: Lasse Collin <lasse.collin@tukaani.org>
  *
- * Translation to Go: Michael Cross <https://xi2.org/x/xz>
+ * Translation to Go: Michael Cross <https://github.com/xi2>
  *
  * This file has been put into the public domain.
  * You can do whatever you want with this file.

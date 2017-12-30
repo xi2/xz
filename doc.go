@@ -30,6 +30,6 @@
 // Bug reports
 //
 // For bug reports relating to this package please contact the author
-// through https://xi2.org/x/xz/issues, and not the authors of XZ
+// through https://github.com/xi2/xz/issues, and not the authors of XZ
 // Embedded.
 package xz
