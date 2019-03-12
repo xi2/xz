@@ -155,9 +155,9 @@ const distStates = 4
  * Get the index of the appropriate probability array for decoding
  * the distance slot.
  */
-func lzmaGetDistState(len uint32) uint32 {
-	if len < distStates+matchLenMin {
-		return len - matchLenMin
+func lzmaGetDistState(length uint32) uint32 {
+	if length < distStates+matchLenMin {
+		return length - matchLenMin
 	} else {
 		return distStates - 1
 	}
@@ -308,7 +308,7 @@ type lzmaDec struct {
 	 * Length of a match. This is updated so that dictRepeat can
 	 * be called again to finish repeating the whole match.
 	 */
-	len uint32
+	length uint32
 	/*
 	 * LZMA properties or related bit masks (number of literal
 	 * context bits, a mask derived from the number of literal
@@ -475,8 +475,8 @@ func dictGet(dict *dictionary, dist uint32) uint32 {
 /*
  * Put one byte into the dictionary. It is assumed that there is space for it.
  */
-func dictPut(dict *dictionary, byte byte) {
-	dict.buf[dict.pos] = byte
+func dictPut(dict *dictionary, bt byte) {
+	dict.buf[dict.pos] = bt
 	dict.pos++
 	if dict.full < dict.pos {
 		dict.full = dict.pos
@@ -488,17 +488,17 @@ func dictPut(dict *dictionary, byte byte) {
  * invalid, false is returned. On success, true is returned and *len is
  * updated to indicate how many bytes were left to be repeated.
  */
-func dictRepeat(dict *dictionary, len *uint32, dist uint32) bool {
+func dictRepeat(dict *dictionary, length *uint32, dist uint32) bool {
 	var back uint32
 	var left uint32
 	if dist >= dict.full || dist >= dict.size {
 		return false
 	}
 	left = dict.limit - dict.pos
-	if left > *len {
-		left = *len
+	if left > *length {
+		left = *length
 	}
-	*len -= left
+	*length -= left
 	back = dict.pos - dist - 1
 	if dist >= dict.pos {
 		back += dict.end
@@ -733,7 +733,7 @@ func lzmaLiteral(s *xzDecLZMA2) {
 	lzmaStateLiteral(&s.lzma.state)
 }
 
-/* Decode the length of the match into s.lzma.len. */
+/* Decode the length of the match into s.lzma.length. */
 func lzmaLen(s *xzDecLZMA2, l *lzmaLenDec, posState uint32) {
 	var probs []uint16
 	var limit uint32
@@ -741,17 +741,17 @@ func lzmaLen(s *xzDecLZMA2, l *lzmaLenDec, posState uint32) {
 	case !rcBit(&s.rc, &l.choice):
 		probs = l.low[posState][:]
 		limit = lenLowSymbols
-		s.lzma.len = matchLenMin
+		s.lzma.length = matchLenMin
 	case !rcBit(&s.rc, &l.choice2):
 		probs = l.mid[posState][:]
 		limit = lenMidSymbols
-		s.lzma.len = matchLenMin + lenLowSymbols
+		s.lzma.length = matchLenMin + lenLowSymbols
 	default:
 		probs = l.high[:]
 		limit = lenHighSymbols
-		s.lzma.len = matchLenMin + lenLowSymbols + lenMidSymbols
+		s.lzma.length = matchLenMin + lenLowSymbols + lenMidSymbols
 	}
-	s.lzma.len += rcBittree(&s.rc, probs[1:], limit) - limit
+	s.lzma.length += rcBittree(&s.rc, probs[1:], limit) - limit
 }
 
 /* Decode a match. The distance will be stored in s.lzma.rep0. */
@@ -764,7 +764,7 @@ func lzmaMatch(s *xzDecLZMA2, posState uint32) {
 	s.lzma.rep2 = s.lzma.rep1
 	s.lzma.rep1 = s.lzma.rep0
 	lzmaLen(s, &s.lzma.matchLenDec, posState)
-	probs = s.lzma.distSlot[lzmaGetDistState(s.lzma.len)][:]
+	probs = s.lzma.distSlot[lzmaGetDistState(s.lzma.length)][:]
 	distSlot = rcBittree(&s.rc, probs[1:], distSlots) - distSlots
 	if distSlot < distModelStart {
 		s.lzma.rep0 = distSlot
@@ -793,7 +793,7 @@ func lzmaRepMatch(s *xzDecLZMA2, posState uint32) {
 	if !rcBit(&s.rc, &s.lzma.isRep0[s.lzma.state]) {
 		if !rcBit(&s.rc, &s.lzma.isRep0Long[s.lzma.state][posState]) {
 			lzmaStateShortRep(&s.lzma.state)
-			s.lzma.len = 1
+			s.lzma.length = 1
 			return
 		}
 	} else {
@@ -822,8 +822,8 @@ func lzmaMain(s *xzDecLZMA2) bool {
 	 * If the dictionary was reached during the previous call, try to
 	 * finish the possibly pending repeat in the dictionary.
 	 */
-	if dictHasSpace(&s.dict) && s.lzma.len > 0 {
-		dictRepeat(&s.dict, &s.lzma.len, s.lzma.rep0)
+	if dictHasSpace(&s.dict) && s.lzma.length > 0 {
+		dictRepeat(&s.dict, &s.lzma.length, s.lzma.rep0)
 	}
 	/*
 	 * Decode more LZMA symbols. One iteration may consume up to
@@ -839,7 +839,7 @@ func lzmaMain(s *xzDecLZMA2) bool {
 			} else {
 				lzmaMatch(s, posState)
 			}
-			if !dictRepeat(&s.dict, &s.lzma.len, s.lzma.rep0) {
+			if !dictRepeat(&s.dict, &s.lzma.length, s.lzma.rep0) {
 				return false
 			}
 		}
@@ -1170,7 +1170,7 @@ func xzDecLZMA2Run(s *xzDecLZMA2, b *xzBuf) xzRet {
 			s.lzma2.uncompressed -= dictFlush(&s.dict, b)
 			switch {
 			case s.lzma2.uncompressed == 0:
-				if s.lzma2.compressed > 0 || s.lzma.len > 0 ||
+				if s.lzma2.compressed > 0 || s.lzma.length > 0 ||
 					!rcIsFinished(&s.rc) {
 					return xzDataError
 				}
@@ -1225,7 +1225,7 @@ func xzDecLZMA2Reset(s *xzDecLZMA2, props byte) xzRet {
 	if len(s.dict.buf) < int(s.dict.size) {
 		s.dict.buf = make([]byte, s.dict.size)
 	}
-	s.lzma.len = 0
+	s.lzma.length = 0
 	s.lzma2.sequence = seqControl
 	s.lzma2.compressed = 0
 	s.lzma2.uncompressed = 0

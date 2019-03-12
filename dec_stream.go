@@ -209,17 +209,17 @@ func fillTemp(s *xzDec, b *xzBuf) bool {
 
 /* Decode a variable-length integer (little-endian base-128 encoding) */
 func decVLI(s *xzDec, in []byte, inPos *int) xzRet {
-	var byte byte
+	var bt byte
 	if s.pos == 0 {
 		s.vli = 0
 	}
 	for *inPos < len(in) {
-		byte = in[*inPos]
+		bt = in[*inPos]
 		*inPos++
-		s.vli |= vliType(byte&0x7f) << uint(s.pos)
-		if byte&0x80 == 0 {
+		s.vli |= vliType(bt&0x7f) << uint(s.pos)
+		if bt&0x80 == 0 {
 			/* Don't allow non-minimal encodings. */
-			if byte == 0 && s.pos != 0 {
+			if bt == 0 && s.pos != 0 {
 				return xzDataError
 			}
 			s.pos = 0
